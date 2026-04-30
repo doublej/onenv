@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+Install:
+  cp docs/examples/onenv-api.plist ~/Library/LaunchAgents/com.doublej.onenv-api.plist
+  Edit paths below to match your install.
+  launchctl load ~/Library/LaunchAgents/com.doublej.onenv-api.plist
+
+Uninstall:
+  launchctl unload ~/Library/LaunchAgents/com.doublej.onenv-api.plist
+  trash ~/Library/LaunchAgents/com.doublej.onenv-api.plist
+
+Logs:
+  tail -f ~/Library/Logs/onenv-api.log
+  tail -f ~/Library/Logs/onenv-api.err
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.doublej.onenv-api</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/bun</string>
+        <string>/Users/YOUR_USER/path/to/onenv/onenv-api/dist/index.js</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/YOUR_USER/path/to/onenv/onenv-api</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>AGENT_API_TOKEN</key>
+        <string>REPLACE_WITH_TOKEN</string>
+        <key>OP_SERVICE_ACCOUNT_TOKEN</key>
+        <string>ops_REPLACE_WITH_SA_TOKEN</string>
+        <key>PERMISSION_MODE</key>
+        <string>desktop</string>
+        <key>ONENV_VAULT</key>
+        <string>onenv</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/YOUR_USER/Library/Logs/onenv-api.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/YOUR_USER/Library/Logs/onenv-api.err</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+</dict>
+</plist>
