@@ -1,0 +1,12 @@
+{
+  "template": "typescript/node-cli",
+  "rendered_at": "2026-02-11T07:17:37.678021+00:00",
+  "context": {
+    "project_name": "onenv-manager",
+    "project_slug": "onenv-manager",
+    "description": "A command-line tool",
+    "author": "Jurre-Jan Smit",
+    "mcp_servers": "none",
+    "mcp_scope": "project"
+  }
+}
