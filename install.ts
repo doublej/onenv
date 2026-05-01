@@ -178,17 +178,19 @@ function parseEnvFile(path: string): EnvEntry[] {
 
 async function onenvSet(namespace: string, key: string, value: string): Promise<void> {
   const title = `${namespace}/${key}`
-  const proc = Bun.spawn([
-    OP_BIN, 'item', 'create',
-    '--vault', ONENV_VAULT,
-    '--category', ONENV_CATEGORY,
-    '--title', title,
-    '--tags', namespace,
-    `credential=${value}`,
-  ], {
-    stdout: 'ignore',
-    stderr: 'pipe',
+  const template = JSON.stringify({
+    title,
+    category: 'API_CREDENTIAL',
+    vault: { name: ONENV_VAULT },
+    tags: [namespace],
+    fields: [{ id: 'credential', type: 'CONCEALED', value, label: 'credential' }],
   })
+  const proc = Bun.spawn(
+    [OP_BIN, 'item', 'create', '-', '--vault', ONENV_VAULT, '--category', ONENV_CATEGORY],
+    { stdin: 'pipe', stdout: 'ignore', stderr: 'pipe' },
+  )
+  proc.stdin.write(template)
+  await proc.stdin.end()
   const code = await proc.exited
   if (code !== 0) {
     const stderr = await new Response(proc.stderr).text()
