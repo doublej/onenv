@@ -9,8 +9,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint": "biome check src/",
+    "lint:fix": "biome check --write src/"
   },
   "dependencies": {
     "express": "^4.21.2",
