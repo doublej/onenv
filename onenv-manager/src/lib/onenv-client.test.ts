@@ -12,6 +12,12 @@ interface FakeChild extends EventEmitter {
   stdin: { end: ReturnType<typeof vi.fn>; write: ReturnType<typeof vi.fn> }
 }
 
+interface OpField {
+  id: string
+  type: string
+  value: string
+}
+
 function fakeChild(stdout = '', stderr = '', code = 0): FakeChild {
   const child = new EventEmitter() as FakeChild
   child.stdout = new EventEmitter()
@@ -23,6 +29,11 @@ function fakeChild(stdout = '', stderr = '', code = 0): FakeChild {
     child.emit('close', code)
   }, 0)
   return child
+}
+
+function lastStdin(child: FakeChild): string {
+  const calls = child.stdin.end.mock.calls
+  return calls.length === 0 ? '' : String(calls[calls.length - 1][0] ?? '')
 }
 
 const sampleItems = [
@@ -83,35 +94,48 @@ describe('onenv-client', () => {
     expect(await listValues('missing')).toEqual({})
   })
 
-  it('setValue creates a new item when get returns not-found', async () => {
+  it('setValue creates a new item with secret piped via stdin', async () => {
     let createArgs: readonly string[] = []
+    let createChild: FakeChild | null = null
     vi.mocked(cp.spawn)
       .mockImplementationOnce((() => fakeChild('', 'item not found', 1)) as never)
       .mockImplementationOnce(((_cmd: string, args: readonly string[]) => {
         createArgs = args
-        return fakeChild('ok') as never
+        createChild = fakeChild('ok')
+        return createChild as never
       }) as never)
     const { setValue } = await import('./onenv-client.js')
     await setValue('aws', 'AWS_KEY', 'secret')
     expect(createArgs).toContain('create')
-    expect(createArgs).toContain('--title')
-    expect(createArgs).toContain('aws/AWS_KEY')
-    expect(createArgs).toContain('credential=secret')
+    expect(createArgs).toContain('-')
+    expect(createArgs).not.toContain('credential=secret')
+    const stdin = JSON.parse(lastStdin(createChild as unknown as FakeChild))
+    expect(stdin.title).toBe('aws/AWS_KEY')
+    expect(stdin.fields.find((f: OpField) => f.id === 'credential').value).toBe('secret')
   })
 
-  it('setValue edits when item already exists', async () => {
+  it('setValue edits existing item via stdin-piped JSON', async () => {
     let editArgs: readonly string[] = []
+    let editChild: FakeChild | null = null
+    const existing = {
+      id: 'x',
+      title: 'aws/AWS_KEY',
+      fields: [{ id: 'credential', type: 'CONCEALED', value: 'old' }],
+    }
     vi.mocked(cp.spawn)
-      .mockImplementationOnce((() => fakeChild('{"id":"x"}')) as never)
+      .mockImplementationOnce((() => fakeChild(JSON.stringify(existing))) as never)
       .mockImplementationOnce(((_cmd: string, args: readonly string[]) => {
         editArgs = args
-        return fakeChild('ok') as never
+        editChild = fakeChild('ok')
+        return editChild as never
       }) as never)
     const { setValue } = await import('./onenv-client.js')
     await setValue('aws', 'AWS_KEY', 'newsecret')
     expect(editArgs).toContain('edit')
     expect(editArgs).toContain('aws/AWS_KEY')
-    expect(editArgs).toContain('credential=newsecret')
+    expect(editArgs).not.toContain('credential=newsecret')
+    const stdin = JSON.parse(lastStdin(editChild as unknown as FakeChild))
+    expect(stdin.fields.find((f: OpField) => f.id === 'credential').value).toBe('newsecret')
   })
 
   it('unsetValue deletes the item', async () => {

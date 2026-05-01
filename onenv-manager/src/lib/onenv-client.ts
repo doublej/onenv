@@ -14,7 +14,7 @@ interface ExecResult {
   stderr: string
 }
 
-async function execOp(args: string[]): Promise<ExecResult> {
+async function execOp(args: string[], stdin?: string): Promise<ExecResult> {
   return await new Promise<ExecResult>((resolve, reject) => {
     const child = spawn('op', args, { stdio: ['pipe', 'pipe', 'pipe'], env: process.env })
 
@@ -43,12 +43,12 @@ async function execOp(args: string[]): Promise<ExecResult> {
       resolve({ code: code ?? 1, stdout, stderr })
     })
 
-    child.stdin.end()
+    child.stdin.end(stdin ?? '')
   })
 }
 
-async function runOp(args: string[]): Promise<string> {
-  const result = await execOp(args)
+async function runOp(args: string[], stdin?: string): Promise<string> {
+  const result = await execOp(args, stdin)
   if (result.code !== 0) {
     throw opError(result.stderr || result.stdout, args)
   }
@@ -155,38 +155,57 @@ function expiresIn90Days(): string {
   return date.toISOString().slice(0, 10)
 }
 
+interface OpField {
+  id: string
+  type: string
+  value: string
+  label?: string
+  purpose?: string
+}
+
+interface OpItemDetail {
+  fields?: OpField[]
+  [key: string]: unknown
+}
+
+function upsertField(item: OpItemDetail, id: string, type: string, value: string): void {
+  if (!item.fields) item.fields = []
+  const existing = item.fields.find((f) => f.id === id)
+  if (existing) {
+    existing.value = value
+    existing.type = type
+    return
+  }
+  item.fields.push({ id, type, value, label: id })
+}
+
 export async function setValue(namespace: string, key: string, value: string): Promise<void> {
   const title = `${namespace}/${key}`
   const expires = expiresIn90Days()
   const check = await execOp(['item', 'get', title, '--vault', ONENV_VAULT, '--format', 'json'])
 
   if (check.code === 0) {
-    await runOp([
-      'item',
-      'edit',
-      title,
-      '--vault',
-      ONENV_VAULT,
-      `credential=${value}`,
-      `expires=${expires}`,
-    ])
+    const item = JSON.parse(check.stdout) as OpItemDetail
+    upsertField(item, 'credential', 'CONCEALED', value)
+    upsertField(item, 'expires', 'DATE', expires)
+    await runOp(['item', 'edit', title, '--vault', ONENV_VAULT], JSON.stringify(item))
     return
   }
 
-  await runOp([
-    'item',
-    'create',
-    '--vault',
-    ONENV_VAULT,
-    '--category',
-    ONENV_CATEGORY,
-    '--title',
+  const template: OpItemDetail = {
     title,
-    '--tags',
-    namespace,
-    `credential=${value}`,
-    `expires=${expires}`,
-  ])
+    category: 'API_CREDENTIAL',
+    vault: { name: ONENV_VAULT },
+    tags: [namespace],
+    fields: [
+      { id: 'credential', type: 'CONCEALED', value, label: 'credential' },
+      { id: 'expires', type: 'DATE', value: expires, label: 'expires' },
+    ],
+  }
+  await runOp(
+    ['item', 'create', '-', '--vault', ONENV_VAULT, '--category', ONENV_CATEGORY],
+    JSON.stringify(template),
+  )
 }
 
 export async function unsetValue(namespace: string, key: string): Promise<void> {
