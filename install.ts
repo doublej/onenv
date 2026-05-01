@@ -279,11 +279,11 @@ await configureEnv()
 await spin('Linking onenv-manager CLI', () => run(['bun', 'link'], MANAGER))
 
 try {
-  const proc = Bun.spawn(['onenv-manager', 'list'], { stdout: 'ignore', stderr: 'ignore' })
-  if ((await proc.exited) === 0) p.log.success('onenv-manager CLI works')
-  else p.log.warn('onenv-manager exited with non-zero — check your setup')
+  const proc = Bun.spawn(['onenv', 'list'], { stdout: 'ignore', stderr: 'ignore' })
+  if ((await proc.exited) === 0) p.log.success('onenv CLI works')
+  else p.log.warn('onenv exited with non-zero — check your setup')
 } catch {
-  p.log.warn('Could not run onenv-manager — you may need to restart your shell')
+  p.log.warn('Could not run onenv — you may need to restart your shell')
 }
 
 const wantScan = guard(await p.confirm({
