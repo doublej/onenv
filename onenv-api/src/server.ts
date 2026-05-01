@@ -1,6 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express'
 import { z } from 'zod'
 import type { ApiConfig } from './lib/config.js'
+import { requestLogger } from './lib/logging.js'
 import {
   disableVar,
   editVar,
@@ -11,7 +12,6 @@ import {
   setVar,
   unsetVar,
 } from './lib/manager-service.js'
-import { requestLogger } from './lib/logging.js'
 import { PermissionService } from './lib/permission.js'
 import { rateLimiter } from './lib/rate-limit.js'
 
@@ -51,20 +51,27 @@ function authMiddleware(config: ApiConfig) {
   }
 }
 
+type PermissionAction = 'set' | 'edit' | 'unset' | 'disable' | 'enable' | 'export'
+
+interface PermissionOptions {
+  action: PermissionAction
+  namespace?: string
+  key?: string
+  details?: string
+}
+
 async function withPermission(
   permissionService: PermissionService,
   req: Request,
   res: Response,
-  action: 'set' | 'edit' | 'unset' | 'disable' | 'enable' | 'export',
-  namespace?: string,
-  key?: string,
+  opts: PermissionOptions,
 ): Promise<boolean> {
   const allowed = await permissionService.request(
     {
-      action,
-      namespace,
-      key,
-      details: `${req.method} ${req.path}`,
+      action: opts.action,
+      namespace: opts.namespace,
+      key: opts.key,
+      details: opts.details ?? `${req.method} ${req.path}`,
     },
     req.header('x-agent-name') ?? undefined,
   )
@@ -111,9 +118,8 @@ export function createApp(config: ApiConfig): express.Express {
   app.post('/v1/vars/set', async (req, res, next) => {
     try {
       const input = setSchema.parse(req.body)
-      if (!(await withPermission(permissionService, req, res, 'set', input.namespace, input.key))) {
-        return
-      }
+      const opts = { action: 'set' as const, namespace: input.namespace, key: input.key }
+      if (!(await withPermission(permissionService, req, res, opts))) return
 
       await setVar(input.namespace, input.key, input.value)
       res.json({ ok: true })
@@ -125,11 +131,8 @@ export function createApp(config: ApiConfig): express.Express {
   app.post('/v1/vars/edit', async (req, res, next) => {
     try {
       const input = setSchema.parse(req.body)
-      if (
-        !(await withPermission(permissionService, req, res, 'edit', input.namespace, input.key))
-      ) {
-        return
-      }
+      const opts = { action: 'edit' as const, namespace: input.namespace, key: input.key }
+      if (!(await withPermission(permissionService, req, res, opts))) return
 
       await editVar(input.namespace, input.key, input.value)
       res.json({ ok: true })
@@ -141,11 +144,8 @@ export function createApp(config: ApiConfig): express.Express {
   app.post('/v1/vars/unset', async (req, res, next) => {
     try {
       const input = nsKeySchema.parse(req.body)
-      if (
-        !(await withPermission(permissionService, req, res, 'unset', input.namespace, input.key))
-      ) {
-        return
-      }
+      const opts = { action: 'unset' as const, namespace: input.namespace, key: input.key }
+      if (!(await withPermission(permissionService, req, res, opts))) return
 
       await unsetVar(input.namespace, input.key)
       res.json({ ok: true })
@@ -157,11 +157,8 @@ export function createApp(config: ApiConfig): express.Express {
   app.post('/v1/vars/disable', async (req, res, next) => {
     try {
       const input = nsKeySchema.parse(req.body)
-      if (
-        !(await withPermission(permissionService, req, res, 'disable', input.namespace, input.key))
-      ) {
-        return
-      }
+      const opts = { action: 'disable' as const, namespace: input.namespace, key: input.key }
+      if (!(await withPermission(permissionService, req, res, opts))) return
 
       await disableVar(input.namespace, input.key)
       res.json({ ok: true })
@@ -173,11 +170,8 @@ export function createApp(config: ApiConfig): express.Express {
   app.post('/v1/vars/enable', async (req, res, next) => {
     try {
       const input = nsKeySchema.parse(req.body)
-      if (
-        !(await withPermission(permissionService, req, res, 'enable', input.namespace, input.key))
-      ) {
-        return
-      }
+      const opts = { action: 'enable' as const, namespace: input.namespace, key: input.key }
+      if (!(await withPermission(permissionService, req, res, opts))) return
 
       await enableVar(input.namespace, input.key)
       res.json({ ok: true })
@@ -189,9 +183,11 @@ export function createApp(config: ApiConfig): express.Express {
   app.post('/v1/env/export', async (req, res, next) => {
     try {
       const input = exportSchema.parse(req.body)
-      if (!(await withPermission(permissionService, req, res, 'export'))) {
-        return
+      const opts = {
+        action: 'export' as const,
+        details: `${req.method} ${req.path} namespaces=${input.namespaces.join(',')}`,
       }
+      if (!(await withPermission(permissionService, req, res, opts))) return
 
       const env = await exportEnabledValues(input.namespaces)
       res.json({ env })
