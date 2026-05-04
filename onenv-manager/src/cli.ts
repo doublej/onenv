@@ -15,6 +15,7 @@ import {
   removeVar,
 } from './index.js'
 import { validationError } from './lib/errors.js'
+import { ensureServiceAccountToken } from './lib/op-token.js'
 import { handleError, output, setJsonMode, success } from './lib/output.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
 import { resolveRef, storeRefs } from './lib/ref-store.js'
@@ -263,4 +264,6 @@ program.hook('preAction', () => {
   }
 })
 
-program.parseAsync().catch(handleError)
+ensureServiceAccountToken()
+  .then(() => program.parseAsync())
+  .catch(handleError)

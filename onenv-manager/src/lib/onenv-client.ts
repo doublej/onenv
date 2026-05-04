@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CliError, opError } from './errors.js'
+import { clearTokenCache } from './op-token.js'
 
 const ONENV_VAULT = process.env.ONENV_VAULT ?? 'onenv'
 const ONENV_CATEGORY = process.env.ONENV_CATEGORY ?? 'API Credential'
@@ -15,6 +16,12 @@ interface ExecResult {
 }
 
 async function execOp(args: string[], stdin?: string): Promise<ExecResult> {
+  const result = await spawnOp(args, stdin)
+  if (result.code !== 0) await invalidateCacheOnAuthFailure(result.stderr)
+  return result
+}
+
+async function spawnOp(args: string[], stdin?: string): Promise<ExecResult> {
   return await new Promise<ExecResult>((resolve, reject) => {
     const child = spawn('op', args, { stdio: ['pipe', 'pipe', 'pipe'], env: process.env })
 
@@ -45,6 +52,14 @@ async function execOp(args: string[], stdin?: string): Promise<ExecResult> {
 
     child.stdin.end(stdin ?? '')
   })
+}
+
+async function invalidateCacheOnAuthFailure(stderr: string): Promise<void> {
+  const lower = stderr.toLowerCase()
+  const isAuth =
+    lower.includes('service account') &&
+    (lower.includes('invalid') || lower.includes('unauthorized') || lower.includes('expired'))
+  if (isAuth) await clearTokenCache()
 }
 
 async function runOp(args: string[], stdin?: string): Promise<string> {
