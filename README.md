@@ -121,7 +121,7 @@ Full endpoint + body docs in [`onenv-api/README.md`](onenv-api/README.md).
 
 ## Avoiding biometric prompts
 
-By default `op` requires Touch ID for every secret read — fine for humans, painful for agents. To run unattended, use a 1Password **service account**:
+By default `op` requires Touch ID for every secret read — fine for humans, painful for agents and CLI consumers. To run unattended, use a 1Password **service account**:
 
 ```bash
 # 1Password web → Developer → Service Accounts → Create
@@ -129,8 +129,10 @@ By default `op` requires Touch ID for every secret read — fine for humans, pai
 
 OP_SERVICE_ACCOUNT_TOKEN=ops_eyJ...                    # literal
 # or
-OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<id>/credential # resolved at startup
+OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<id>/credential # resolved on first use
 ```
+
+Both `onenv-api` (resolves at boot) and the `onenv` CLI (resolves on first command, caches the literal at `~/.config/onenv-manager/op-token` mode 0600) accept either form. After the first resolution all subsequent calls are silent.
 
 Tradeoff: token compromise = vault compromise. Keep the `onenv` vault scoped to non-personal secrets. Full guide: [`docs/guides/service-account-setup.md`](docs/guides/service-account-setup.md).
 

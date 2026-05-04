@@ -61,29 +61,36 @@ cp onenv-api/.env.example onenv-api/.env
 ### Avoiding constant 1Password approvals
 
 By default `op` requires biometric unlock (Touch ID / desktop app) for every
-secret read. Agents calling `onenv-api` repeatedly will trigger prompt spam.
+secret read. Agents calling `onenv-api` repeatedly — and any process invoking
+the `onenv` CLI — will trigger prompt spam.
 
 To run headless / no-prompts, create a **1Password service account**:
 
 1. 1Password web → **Developer** → **Service Accounts** → **Create**.
 2. Grant **read + write** access to the `onenv` vault.
-3. Set the token in `onenv-api/.env`. Two forms accepted:
+3. Set `OP_SERVICE_ACCOUNT_TOKEN` for both the API (`onenv-api/.env`) and the
+   shell that runs the `onenv` CLI. Two forms accepted:
 
    ```
    # literal — fastest, but plaintext on disk
    OP_SERVICE_ACCOUNT_TOKEN=ops_eyJ...
 
-   # 1Password reference — resolved at startup via `op read`
-   # (one biometric prompt at boot; zero during normal operation)
+   # 1Password reference — resolved on first use via `op read`
+   # (one biometric prompt; cached afterwards, zero during normal operation)
    OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<item-id>/credential
    ```
 
 4. Restart the API. Startup log should show `1password auth: service-account`.
+   For the CLI, the first command resolves the reference; subsequent commands
+   read the cached literal at `~/.config/onenv-manager/op-token` (mode 0600).
 
 Tradeoffs:
 - Token compromise = vault compromise. Store carefully (keychain / sealed env).
 - Service accounts can't access personal vaults — keep `onenv` vault scoped.
 - Audit log will attribute reads to the service account, not your user.
+- After rotating the SA token, delete `~/.config/onenv-manager/op-token` (or
+  let the next failed `op` call self-invalidate the cache) so the CLI
+  re-resolves the new value.
 
 > **Note:** The code reads env vars via `process.env` directly — there is no built-in dotenv loader. Use Bun's `--env-file .env` flag or Node 20+'s `--env-file` to load `.env` files:
 >
