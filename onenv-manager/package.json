@@ -8,7 +8,7 @@
     "onenv": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && chmod +x dist/cli.js",
     "dev": "tsx watch src/cli.ts",
     "start": "node dist/cli.js",
     "test": "vitest",
