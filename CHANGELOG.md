@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — 2026-05-04
+
+### Fixed
+
+- **`onenv` CLI: zero-prompt service-account flow.** When `OP_SERVICE_ACCOUNT_TOKEN` was set as a `op://...` reference (the documented form for keeping the literal token off disk), the CLI passed it straight to `op`, which only accepts literal `ops_eyJ...` tokens. The malformed value was ignored and `op` fell back to Touch ID on every spawn. Consumers running `onenv export` / `onenv run` saw a biometric prompt per invocation.
+
+### Changed
+
+- **`onenv` CLI now resolves `op://...` references on first use and caches the literal** at `~/.config/onenv-manager/op-token` (mode 0600). First call costs one biometric prompt; subsequent calls are silent. Mirrors the existing `onenv-api` startup resolver.
+- **Self-healing cache**: when `op` reports the cached service-account token as invalid / unauthorized / expired (e.g. after rotation), `execOp` clears the cache file. The next CLI invocation re-resolves the reference. Manual `rm` of the cache file also works.
+- Docs (`README.md`, `INSTALL.md`, `docs/guides/service-account-setup.md`) updated to cover the CLI surface, cache location, and rotation flow.
+
 ## 0.1.0 — 2026-04-30
 
 Initial public release.

@@ -22,7 +22,7 @@ import { resolveRef, storeRefs } from './lib/ref-store.js'
 
 const program = new Command()
   .name('onenv')
-  .version('0.1.0')
+  .version('0.2.0')
   .description('Manage 1Password-backed variables with an interactive TUI and scriptable commands.')
   .option('--json', 'Force JSON output (default when piped)')
 
