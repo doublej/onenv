@@ -8,8 +8,8 @@ import {
   editVar,
   enableVar,
   exportEnabledValues,
-  getNamespaceVars,
   getNamespaces,
+  getNamespaceVars,
   setVar,
   unsetVar,
 } from './lib/manager-service.js'

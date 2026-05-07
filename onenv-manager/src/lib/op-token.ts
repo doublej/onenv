@@ -13,7 +13,7 @@ export function getTokenCachePath(): string {
 
 export async function ensureServiceAccountToken(): Promise<void> {
   const raw = process.env.OP_SERVICE_ACCOUNT_TOKEN
-  if (!raw || !raw.startsWith('op://')) return
+  if (!raw?.startsWith('op://')) return
 
   const cached = await readCache()
   if (cached) {

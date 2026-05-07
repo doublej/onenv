@@ -5,8 +5,8 @@ import {
   disableVar,
   editVar,
   enableVar,
-  getNamespaceVarsWithValues,
   getNamespaces,
+  getNamespaceVarsWithValues,
   removeVar,
 } from '../lib/manager-service.js'
 import type { NamespaceVar } from '../lib/types.js'
@@ -66,7 +66,7 @@ async function chooseNamespace(): Promise<string> {
       message: 'Namespace name',
       placeholder: 'project-name',
       validate(value) {
-        return value.trim().length > 0 ? undefined : 'Namespace is required'
+        return value && value.trim().length > 0 ? undefined : 'Namespace is required'
       },
     }),
   )
@@ -98,7 +98,7 @@ async function promptSecret(message: string): Promise<string> {
       message,
       mask: '•',
       validate(value) {
-        return value.length > 0 ? undefined : 'Value is required'
+        return value && value.length > 0 ? undefined : 'Value is required'
       },
     }),
   )
@@ -117,7 +117,7 @@ async function handleSet(namespace: string): Promise<void> {
         message: 'Variable name',
         placeholder: 'AWS_SECRET_ACCESS_KEY',
         validate(value) {
-          return value.trim().length > 0 ? undefined : 'Variable name is required'
+          return value && value.trim().length > 0 ? undefined : 'Variable name is required'
         },
       }),
     ),

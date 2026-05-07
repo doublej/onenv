@@ -10,8 +10,8 @@ import {
   editVar,
   enableVar,
   exportEnabledValues,
-  getNamespaceVars,
   getNamespaces,
+  getNamespaceVars,
   removeVar,
 } from './index.js'
 import { validationError } from './lib/errors.js'
@@ -48,7 +48,7 @@ async function readValueFromPrompt(namespace: string, key: string): Promise<stri
     message: `${namespace}.${key} value`,
     mask: '•',
     validate(candidate) {
-      return candidate.length > 0 ? undefined : 'Value is required'
+      return candidate && candidate.length > 0 ? undefined : 'Value is required'
     },
   })
   return assertValue(value)

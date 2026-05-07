@@ -33,7 +33,7 @@ Single test: `bun run vitest run src/lib/state-store.test.ts`
 cd onenv-api
 bun run biome check --write src/   # lint + format
 bunx tsc --noEmit                  # typecheck
-bun run test run                   # tests (vitest)
+bun run test                       # tests (vitest)
 bun run dev                        # dev with watch
 bun run build                      # tsc → dist/
 ```

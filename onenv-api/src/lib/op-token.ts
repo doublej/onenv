@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process'
 
 export async function resolveServiceAccountToken(): Promise<void> {
   const raw = process.env.OP_SERVICE_ACCOUNT_TOKEN
-  if (!raw || !raw.startsWith('op://')) return
+  if (!raw?.startsWith('op://')) return
 
   const resolved = await opRead(raw)
   process.env.OP_SERVICE_ACCOUNT_TOKEN = resolved
