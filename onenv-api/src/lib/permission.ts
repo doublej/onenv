@@ -67,11 +67,13 @@ class DesktopPermissionBroker implements PermissionBroker {
       .filter(Boolean)
       .join('\\n')
 
-    const script = `display dialog ${JSON.stringify(summary)} buttons {"Deny", "Allow"} default button "Allow" with title "onenv-api" giving up after ${timeoutSeconds}`
+    const script = `display dialog ${JSON.stringify(summary)} buttons {"Deny", "Allow"} default button "Deny" with title "onenv-api" giving up after ${timeoutSeconds}`
 
     try {
       const result = await execFileAsync('osascript', ['-e', script])
-      return result.stdout.includes('button returned:Allow')
+      return (
+        result.stdout.includes('button returned:Allow') && !result.stdout.includes('gave up:true')
+      )
     } catch {
       return false
     }
@@ -259,9 +261,13 @@ export class PermissionService {
 
     const desktopBroker = this.brokers.find((broker) => broker.name === 'desktop')
     const telegramBroker = this.brokers.find((broker) => broker.name === 'telegram')
+    const needsDesktop = this.mode !== 'telegram'
+    const needsTelegram = this.mode !== 'desktop'
 
-    const desktopAllowed = await runBroker(desktopBroker, fullRequest, this.timeoutMs)
-    const telegramAllowed = await runBroker(telegramBroker, fullRequest, this.timeoutMs)
+    const [desktopAllowed, telegramAllowed] = await Promise.all([
+      needsDesktop ? runBroker(desktopBroker, fullRequest, this.timeoutMs) : false,
+      needsTelegram ? runBroker(telegramBroker, fullRequest, this.timeoutMs) : false,
+    ])
 
     return shouldAllow(this.mode, desktopAllowed, telegramAllowed)
   }

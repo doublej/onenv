@@ -25,7 +25,7 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           ONENV_VAULT: onenv-prod
-        run: onenv run --ns my-app -- bun run deploy
+        run: onenv export my-app -- bun run deploy
 ```
 
 ## GitLab CI
@@ -39,7 +39,7 @@ deploy:
   script:
     - apt-get update && apt-get install -y 1password-cli
     - bun install
-    - onenv run --ns my-app -- bun run deploy
+    - onenv export my-app -- bun run deploy
 ```
 
 ## Docker / Kubernetes
@@ -70,7 +70,7 @@ For `onenv-api` running as a long-lived service:
 
 ```bash
 op whoami                  # confirms SA token works
-onenv list --ns my-app     # confirms vault access
+onenv list my-app          # confirms vault access
 ```
 
 If `op whoami` fails, the token is wrong or revoked. Fix that before debugging onenv.

@@ -4,13 +4,13 @@ import { loadConfig } from './config.js'
 const ENV_KEYS = [
   'AGENT_API_TOKEN',
   'PERMISSION_MODE',
+  'PERMISSION_TIMEOUT_MS',
   'API_HOST',
   'API_PORT',
   'ONENV_VAULT',
   'ONENV_CATEGORY',
 ] as const
 
-// biome-ignore lint/performance/noDelete: process.env requires delete (= undefined sets string "undefined")
 function clearEnv(): void {
   for (const key of ENV_KEYS) delete process.env[key]
 }
@@ -46,5 +46,12 @@ describe('loadConfig', () => {
     process.env.PERMISSION_MODE = 'invalid'
 
     expect(() => loadConfig()).toThrow('Invalid PERMISSION_MODE: invalid')
+  })
+
+  it('throws for invalid numeric config', () => {
+    process.env.AGENT_API_TOKEN = 'token'
+    process.env.API_PORT = 'nope'
+
+    expect(() => loadConfig()).toThrow('Invalid API_PORT: nope')
   })
 })

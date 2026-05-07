@@ -1,6 +1,6 @@
 # Running commands with secrets
 
-3 ways inject secrets into process. Pick by surface.
+2 ways inject secrets into process. Pick by surface.
 
 ## `onenv run --` (preferred)
 
@@ -12,37 +12,18 @@ onenv run -- python -m my_pkg
 onenv run -- bun start
 ```
 
-Reads `.onenv.json` for namespaces. Override with `--ns`:
-
-```bash
-onenv run --ns aws -- aws s3 ls
-onenv run --ns @prod --ns stripe -- node app.js
-```
+Reads `.onenv.json` for namespaces. Use `onenv export ns -- cmd` for one-off namespace selection.
 
 ## `onenv export`
 
-Prints `KEY=value` to stdout. Source into current shell:
+Prints enabled values as JSON, or runs a command with selected namespace values injected:
 
 ```bash
-eval "$(onenv export)"
-node app.js
+onenv export aws,project
+onenv export aws,project -- node app.js
 ```
 
-Use for: long-lived REPLs, debug, one-off sessions. Avoid in scripts — `run` cleaner.
-
-## Shell integration (auto-load on `cd`)
-
-Add to `~/.zshrc` / `~/.bashrc`:
-
-```bash
-chpwd_onenv() {
-  [[ -f .onenv.json ]] && eval "$(onenv export 2>/dev/null)"
-}
-add-zsh-hook chpwd chpwd_onenv  # zsh
-# bash: trap '[[ "$PWD" != "$LAST_PWD" ]] && chpwd_onenv; LAST_PWD="$PWD"' DEBUG
-```
-
-Trade-off: secrets enter every shell in dir. Convenient, less safe.
+Use for: debug and one-off namespace selection. Prefer `run` when a project has `.onenv.json`.
 
 ## In Node / TypeScript
 

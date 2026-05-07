@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import express, { type NextFunction, type Request, type Response } from 'express'
 import { z } from 'zod'
 import type { ApiConfig } from './lib/config.js'
@@ -15,23 +16,47 @@ import {
 import { PermissionService } from './lib/permission.js'
 import { rateLimiter } from './lib/rate-limit.js'
 
+const namespaceSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_.-]*$/, 'invalid namespace')
+
+const keySchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'invalid key')
+
 const setSchema = z.object({
-  namespace: z.string().min(1),
-  key: z.string().min(1),
+  namespace: namespaceSchema,
+  key: keySchema,
   value: z.string(),
 })
 
 const nsKeySchema = z.object({
-  namespace: z.string().min(1),
-  key: z.string().min(1),
+  namespace: namespaceSchema,
+  key: keySchema,
 })
 
 const exportSchema = z.object({
-  namespaces: z.array(z.string().min(1)).min(1),
+  namespaces: z.array(namespaceSchema).min(1),
 })
 
 function errorResponse(res: Response, code: number, message: string): void {
   res.status(code).json({ error: message })
+}
+
+function tokenDigest(token: string | undefined): Buffer {
+  return createHash('sha256')
+    .update(token ?? '')
+    .digest()
+}
+
+function tokenMatches(actual: string | undefined, expected: string): boolean {
+  return timingSafeEqual(tokenDigest(actual), tokenDigest(expected))
 }
 
 function authMiddleware(config: ApiConfig) {
@@ -42,7 +67,7 @@ function authMiddleware(config: ApiConfig) {
     }
 
     const token = req.header('x-onenv-token')
-    if (token !== config.authToken) {
+    if (!tokenMatches(token, config.authToken)) {
       errorResponse(res, 401, 'unauthorized')
       return
     }
@@ -90,6 +115,7 @@ export function createApp(config: ApiConfig): express.Express {
 
   app.use(requestLogger())
   app.use(express.json({ limit: '32kb' }))
+  app.use(rateLimiter({ key: (req) => req.ip ?? 'unknown', maxPerWindow: 120, methods: 'all' }))
   app.use(authMiddleware(config))
   app.use(rateLimiter())
 

@@ -39,8 +39,8 @@ bun run start -- tui
 ```bash
 onenv-manager tui
 onenv-manager list [namespace]
-onenv-manager set <namespace> <key> [value]
-onenv-manager edit <namespace> <key> [value]
+onenv-manager set <namespace> <key>
+onenv-manager edit <namespace> <key>
 onenv-manager unset <namespace> <key>
 onenv-manager disable <namespace> <key>
 onenv-manager enable <namespace> <key>

@@ -24,6 +24,14 @@ function parsePermissionMode(raw: string | undefined): PermissionMode {
   throw new Error(`Invalid PERMISSION_MODE: ${raw}`)
 }
 
+function parsePositiveInteger(name: string, raw: string | undefined, fallback: number): number {
+  const value = Number(raw ?? String(fallback))
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`Invalid ${name}: ${raw}`)
+  }
+  return value
+}
+
 export function loadConfig(): ApiConfig {
   const authToken = process.env.AGENT_API_TOKEN
   if (!authToken) {
@@ -32,10 +40,14 @@ export function loadConfig(): ApiConfig {
 
   return {
     host: process.env.API_HOST ?? '127.0.0.1',
-    port: Number(process.env.API_PORT ?? '4317'),
+    port: parsePositiveInteger('API_PORT', process.env.API_PORT, 4317),
     authToken,
     permissionMode: parsePermissionMode(process.env.PERMISSION_MODE),
-    permissionTimeoutMs: Number(process.env.PERMISSION_TIMEOUT_MS ?? '120000'),
+    permissionTimeoutMs: parsePositiveInteger(
+      'PERMISSION_TIMEOUT_MS',
+      process.env.PERMISSION_TIMEOUT_MS,
+      120000,
+    ),
     onenvVault: process.env.ONENV_VAULT ?? 'onenv',
     onenvCategory: process.env.ONENV_CATEGORY ?? 'API Credential',
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,

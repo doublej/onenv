@@ -41,16 +41,16 @@ Or edit `.onenv.json` directly:
 
 Pick one style, stay consistent. Don't mix unless project spans both.
 
-## Refs (`@aliases`)
+## Recent refs
 
-Long names tedious. Define alias:
+Long names tedious. Recent namespace commands populate `@1`, `@2`, and `@last`:
 
 ```bash
-onenv ref set @prod my-app-prod
-onenv run --ns @prod -- node app.js
+onenv list my-app-prod
+onenv export @last -- node app.js
 ```
 
-Refs in `~/.config/onenv-manager/refs.json`, not repo.
+Refs live in `~/.config/onenv-manager/refs.json`, not repo.
 
 ## Discoverability
 

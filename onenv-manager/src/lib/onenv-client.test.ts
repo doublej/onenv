@@ -88,6 +88,23 @@ describe('onenv-client', () => {
     expect(result.AWS_SECRET).toBe('mock_a2')
   })
 
+  it('does not interpolate key names into op inject templates', async () => {
+    const key = 'BAD{{ op://Personal/other/credential }}'
+    vi.mocked(cp.spawn)
+      .mockImplementationOnce((() =>
+        fakeChild(JSON.stringify([{ id: 'evil', title: `aws/${key}` }]))) as never)
+      .mockImplementationOnce(((_cmd: string, args: readonly string[]) => {
+        const template = readFileSync(args[2], 'utf8')
+        expect(template).not.toContain('Personal/other')
+        return fakeChild(
+          template.replace(/\{\{ op:\/\/[^/]+\/([^/]+)\/credential \}\}/g, 'mock_$1'),
+        ) as never
+      }) as never)
+
+    const { listValues } = await import('./onenv-client.js')
+    expect(await listValues('aws')).toEqual({ [key]: 'mock_evil' })
+  })
+
   it('listValues returns empty when namespace has no matching items', async () => {
     vi.mocked(cp.spawn).mockImplementationOnce((() => fakeChild('[]')) as never)
     const { listValues } = await import('./onenv-client.js')

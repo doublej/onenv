@@ -19,6 +19,7 @@ import { ensureServiceAccountToken } from './lib/op-token.js'
 import { handleError, output, setJsonMode, success } from './lib/output.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
 import { resolveRef, storeRefs } from './lib/ref-store.js'
+import { validateKey, validateNamespace } from './lib/validation.js'
 
 const program = new Command()
   .name('onenv')
@@ -36,10 +37,10 @@ function requireKeys(keys: string[], command: string): void {
 }
 
 function assertValue(input: unknown): string {
-  if (typeof input !== 'string' || p.isCancel(input) || input.trim().length === 0) {
+  if (typeof input !== 'string' || p.isCancel(input) || input.length === 0) {
     throw validationError('Value is required')
   }
-  return input.trim()
+  return input
 }
 
 async function readValueFromPrompt(namespace: string, key: string): Promise<string> {
@@ -51,6 +52,11 @@ async function readValueFromPrompt(namespace: string, key: string): Promise<stri
     },
   })
   return assertValue(value)
+}
+
+function argsAfterDoubleDash(): string[] | null {
+  const dashIndex = process.argv.indexOf('--')
+  return dashIndex === -1 ? null : process.argv.slice(dashIndex + 1)
 }
 
 program
@@ -78,7 +84,7 @@ program
       output(namespaces)
       return
     }
-    const namespace = await resolveRef(rawNamespace)
+    const namespace = validateNamespace(await resolveRef(rawNamespace))
     const vars = await getNamespaceVars(namespace)
     await storeRefs([namespace])
     output(vars)
@@ -89,13 +95,13 @@ program
   .description('Create or update a variable')
   .argument('<namespace>', 'Namespace (supports @refs)')
   .argument('<key>', 'Variable name')
-  .argument('[value]', 'Variable value (prompts if omitted)')
-  .action(async (rawNamespace: string, key: string, value?: string) => {
-    const namespace = await resolveRef(rawNamespace)
-    const next = value ?? (await readValueFromPrompt(namespace, key))
-    await createOrUpdateVar(namespace, key, next)
+  .action(async (rawNamespace: string, key: string) => {
+    const namespace = validateNamespace(await resolveRef(rawNamespace))
+    const safeKey = validateKey(key)
+    const next = await readValueFromPrompt(namespace, safeKey)
+    await createOrUpdateVar(namespace, safeKey, next)
     await storeRefs([namespace])
-    success(`Saved ${namespace}.${key}`, { namespace, key })
+    success(`Saved ${namespace}.${safeKey}`, { namespace, key: safeKey })
   })
 
 program
@@ -103,13 +109,13 @@ program
   .description('Edit an existing variable value')
   .argument('<namespace>', 'Namespace (supports @refs)')
   .argument('<key>', 'Variable name')
-  .argument('[value]', 'Variable value (prompts if omitted)')
-  .action(async (rawNamespace: string, key: string, value?: string) => {
-    const namespace = await resolveRef(rawNamespace)
-    const next = value ?? (await readValueFromPrompt(namespace, key))
-    await editVar(namespace, key, next)
+  .action(async (rawNamespace: string, key: string) => {
+    const namespace = validateNamespace(await resolveRef(rawNamespace))
+    const safeKey = validateKey(key)
+    const next = await readValueFromPrompt(namespace, safeKey)
+    await editVar(namespace, safeKey, next)
     await storeRefs([namespace])
-    success(`Updated ${namespace}.${key}`, { namespace, key })
+    success(`Updated ${namespace}.${safeKey}`, { namespace, key: safeKey })
   })
 
 program
@@ -119,12 +125,13 @@ program
   .argument('<keys...>', 'Variable names to remove')
   .action(async (rawNamespace: string, keys: string[]) => {
     requireKeys(keys, 'unset')
-    const namespace = await resolveRef(rawNamespace)
-    for (const key of keys) {
+    const namespace = validateNamespace(await resolveRef(rawNamespace))
+    const safeKeys = keys.map(validateKey)
+    for (const key of safeKeys) {
       await removeVar(namespace, key)
     }
     await storeRefs([namespace])
-    success(`Unset ${keys.length} variable(s) in ${namespace}`, { namespace, keys })
+    success(`Unset ${safeKeys.length} variable(s) in ${namespace}`, { namespace, keys: safeKeys })
   })
 
 program
@@ -134,12 +141,16 @@ program
   .argument('<keys...>', 'Variable names to disable')
   .action(async (rawNamespace: string, keys: string[]) => {
     requireKeys(keys, 'disable')
-    const namespace = await resolveRef(rawNamespace)
-    for (const key of keys) {
+    const namespace = validateNamespace(await resolveRef(rawNamespace))
+    const safeKeys = keys.map(validateKey)
+    for (const key of safeKeys) {
       await disableVar(namespace, key)
     }
     await storeRefs([namespace])
-    success(`Disabled ${keys.length} variable(s) in ${namespace}`, { namespace, keys })
+    success(`Disabled ${safeKeys.length} variable(s) in ${namespace}`, {
+      namespace,
+      keys: safeKeys,
+    })
   })
 
 program
@@ -149,12 +160,13 @@ program
   .argument('<keys...>', 'Variable names to enable')
   .action(async (rawNamespace: string, keys: string[]) => {
     requireKeys(keys, 'enable')
-    const namespace = await resolveRef(rawNamespace)
-    for (const key of keys) {
+    const namespace = validateNamespace(await resolveRef(rawNamespace))
+    const safeKeys = keys.map(validateKey)
+    for (const key of safeKeys) {
       await enableVar(namespace, key)
     }
     await storeRefs([namespace])
-    success(`Enabled ${keys.length} variable(s) in ${namespace}`, { namespace, keys })
+    success(`Enabled ${safeKeys.length} variable(s) in ${namespace}`, { namespace, keys: safeKeys })
   })
 
 program
@@ -176,15 +188,8 @@ program
     })
     if (p.isCancel(selected)) return
 
-    const run = await p.text({
-      message: 'Command to run (e.g. bun run dev, python app.py)',
-      validate: (v) => (v.trim().length > 0 ? undefined : 'Required'),
-    })
-    if (p.isCancel(run)) return
-
     const path = await writeProjectConfig({
-      namespaces: selected as string[],
-      run: run.trim(),
+      namespaces: (selected as string[]).map(validateNamespace),
     })
     success(`Created ${path}`)
   })
@@ -192,12 +197,17 @@ program
 program
   .command('run')
   .description('Run project command with secrets injected from .onenv.json')
+  .argument('[-- command...]', 'Command to run with exported vars as env')
+  .allowExcessArguments(true)
   .action(async () => {
     const config = await readProjectConfig()
     const values = await exportEnabledValues(config.namespaces)
-    const parts = config.run.split(' ')
+    const cmd = argsAfterDoubleDash()
+    if (!cmd || cmd.length === 0) {
+      throw validationError('No command provided after --', 'onenv run -- node app.js')
+    }
 
-    const child = spawn(parts[0], parts.slice(1), {
+    const child = spawn(cmd[0], cmd.slice(1), {
       stdio: 'inherit',
       env: { ...process.env, ...values },
     })
@@ -211,7 +221,6 @@ program
   .argument('[-- command...]', 'Command to run with exported vars as env')
   .allowExcessArguments(true)
   .action(async (rawNamespaces: string) => {
-    const dashIndex = process.argv.indexOf('--')
     const parts = rawNamespaces
       .split(',')
       .map((s) => s.trim())
@@ -219,16 +228,16 @@ program
     if (parts.length === 0) {
       throw validationError('At least one namespace is required', 'onenv export aws,project')
     }
-    const namespaces = await Promise.all(parts.map(resolveRef))
+    const namespaces = (await Promise.all(parts.map(resolveRef))).map(validateNamespace)
     await storeRefs(namespaces)
     const values = await exportEnabledValues(namespaces)
+    const cmd = argsAfterDoubleDash()
 
-    if (dashIndex === -1) {
+    if (!cmd) {
       output(values)
       return
     }
 
-    const cmd = process.argv.slice(dashIndex + 1)
     if (cmd.length === 0) {
       throw validationError(
         'No command provided after --',
@@ -252,8 +261,9 @@ program
       return
     }
     const namespace = await resolveRef(input)
-    const vars = await getNamespaceVars(namespace)
-    await storeRefs([namespace])
+    const safeNamespace = validateNamespace(namespace)
+    const vars = await getNamespaceVars(safeNamespace)
+    await storeRefs([safeNamespace])
     output(vars)
   })
 

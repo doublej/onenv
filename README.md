@@ -94,8 +94,8 @@ onenv set <ns> <KEY>                     # add/overwrite (interactive prompt)
 onenv unset <ns> <KEY>                   # delete
 onenv disable <ns> <KEY>                 # hide without delete
 onenv enable <ns> <KEY>                  # restore
-onenv run -- <cmd>                       # run command with secrets injected
-onenv export                             # print as shell exports
+onenv run -- <cmd>                       # run command with project secrets injected
+onenv export <ns[,ns2]>                  # print enabled values as JSON
 onenv tui                                # interactive
 ```
 

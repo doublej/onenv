@@ -8,25 +8,35 @@ interface Bucket {
 const WINDOW_MS = 60_000
 const MAX_PER_WINDOW = 60
 
-export function rateLimiter() {
+interface RateLimiterOptions {
+  key?: (req: Request) => string
+  maxPerWindow?: number
+  methods?: 'all' | 'mutating'
+  windowMs?: number
+}
+
+export function rateLimiter(options: RateLimiterOptions = {}) {
   const buckets = new Map<string, Bucket>()
+  const maxPerWindow = options.maxPerWindow ?? MAX_PER_WINDOW
+  const methods = options.methods ?? 'mutating'
+  const windowMs = options.windowMs ?? WINDOW_MS
 
   return (req: Request, res: Response, next: NextFunction) => {
-    if (req.method === 'GET') {
+    if (methods === 'mutating' && req.method === 'GET') {
       next()
       return
     }
-    const key = req.header('x-onenv-token') ?? req.ip ?? 'unknown'
+    const key = options.key?.(req) ?? req.header('x-onenv-token') ?? req.ip ?? 'unknown'
     const now = Date.now()
     const bucket = buckets.get(key)
 
     if (!bucket || bucket.resetAt <= now) {
-      buckets.set(key, { count: 1, resetAt: now + WINDOW_MS })
+      buckets.set(key, { count: 1, resetAt: now + windowMs })
       next()
       return
     }
 
-    if (bucket.count >= MAX_PER_WINDOW) {
+    if (bucket.count >= maxPerWindow) {
       const retryAfter = Math.ceil((bucket.resetAt - now) / 1000)
       res.setHeader('Retry-After', String(retryAfter))
       res.status(429).json({ error: 'rate limit exceeded' })

@@ -4,9 +4,9 @@ export function printPrime(): void {
 
 <workflow>
   Project setup (once):
-    1. onenv set NAMESPACE KEY [value] — store secrets (prompts for value if omitted)
-    2. cd PROJECT &amp;&amp; onenv init — pick namespaces + run command, saves .onenv.json
-    3. onenv run — fetches secrets, injects as env vars, runs the configured command
+    1. onenv set NAMESPACE KEY — store secrets through an interactive prompt
+    2. cd PROJECT &amp;&amp; onenv init — pick namespaces, saves .onenv.json
+    3. onenv run -- CMD — fetches secrets, injects as env vars, runs CMD
 
   Ad-hoc:
     onenv export ns1,ns2 -- CMD — run CMD with secrets injected
@@ -14,14 +14,14 @@ export function printPrime(): void {
 </workflow>
 
 <commands>
-  set ns key [value] — Create or update a secret. onenv set aws AWS_KEY myvalue
-  edit ns key [value] — Update an existing secret's value.
+  set ns key — Create or update a secret through an interactive prompt.
+  edit ns key — Update an existing secret's value through an interactive prompt.
   unset ns key... — Delete secrets. onenv unset aws KEY1 KEY2
   list [ns] — List namespaces (no arg) or variables in a namespace.
   disable ns key... — Exclude from export without deleting.
   enable ns key... — Re-include in export.
   init — Interactive project setup, saves .onenv.json.
-  run — Run project command from .onenv.json with secrets as env vars.
+  run -- cmd... — Run a command with project secrets as env vars.
   export ns[,ns2] — Export enabled secrets as JSON.
   export ns -- cmd... — Run cmd with secrets injected. onenv export porkbun -- python app.py
 </commands>

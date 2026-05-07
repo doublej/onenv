@@ -21,22 +21,16 @@ Per-project `.onenv.json` declares which it uses:
 
 Pros: explicit, no ambiguity. Cons: namespace count doubles.
 
-## Refs (`@aliases`)
+## Recent refs
 
-Define `@prod` and `@dev` aliases:
+Use recent refs for ad-hoc commands:
 
 ```bash
-onenv ref set @env aws-dev      # in dev shell
-onenv ref set @env aws-prod     # in prod shell
+onenv list aws-prod
+onenv export @last -- node app.js
 ```
 
-`.onenv.json` references the alias:
-
-```json
-{ "namespaces": ["@env", "stripe-dev"] }
-```
-
-Refs per-machine (`~/.config/onenv-manager/refs.json`). Each box resolves differently. Good for prod servers that must never see dev keys.
+`.onenv.json` should keep concrete namespaces so code review can see which environment a project uses.
 
 ## Single namespace + key prefix (don't)
 

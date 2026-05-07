@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -24,7 +24,9 @@ async function readRefs(): Promise<RefState> {
 async function writeRefs(state: RefState): Promise<void> {
   const path = getRefPath()
   await mkdir(dirname(path), { recursive: true })
+  await chmod(dirname(path), 0o700)
   await writeFile(path, JSON.stringify(state, null, 2), 'utf-8')
+  await chmod(path, 0o600)
 }
 
 export async function storeRefs(namespaces: string[]): Promise<void> {

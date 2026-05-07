@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 
@@ -36,7 +36,9 @@ async function readState(): Promise<StateFile> {
 async function writeState(state: StateFile): Promise<void> {
   const statePath = getStatePath()
   await mkdir(dirname(statePath), { recursive: true })
+  await chmod(dirname(statePath), 0o700)
   await writeFile(statePath, JSON.stringify(state, null, 2), 'utf-8')
+  await chmod(statePath, 0o600)
 }
 
 export async function getDisabledMap(): Promise<Record<string, string[]>> {

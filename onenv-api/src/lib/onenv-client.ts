@@ -115,27 +115,35 @@ export async function listKeys(namespace: string): Promise<string[]> {
 
 export async function listValues(namespace: string): Promise<Record<string, string>> {
   const items = await listItems(namespace)
-  const matched: { id: string; key: string }[] = []
+  const matched: { id: string; key: string; index: number }[] = []
   for (const item of items) {
     const parsed = parseTitle(item.title)
-    if (parsed?.namespace === namespace) matched.push({ id: item.id, key: parsed.key })
+    if (parsed?.namespace === namespace) {
+      matched.push({ id: item.id, key: parsed.key, index: matched.length })
+    }
   }
   if (matched.length === 0) return {}
 
   const sep = `<<ONENV_SEP_${randomBytes(8).toString('hex')}>>`
   const template = `${matched
-    .map(({ id, key }) => `${sep}${key}${sep}{{ op://${ONENV_VAULT}/${id}/credential }}`)
+    .map(({ id, index }) => `${sep}${index}${sep}{{ op://${ONENV_VAULT}/${id}/credential }}`)
     .join('\n')}\n`
 
   const output = await runOpInject(template)
-  return parseInject(output, sep)
+  return parseInject(
+    output,
+    sep,
+    matched.map(({ key }) => key),
+  )
 }
 
-function parseInject(output: string, sep: string): Record<string, string> {
+function parseInject(output: string, sep: string, keys: string[]): Record<string, string> {
   const result: Record<string, string> = {}
   const parts = output.split(sep)
   for (let i = 1; i + 1 < parts.length; i += 2) {
-    const key = parts[i]
+    const index = Number.parseInt(parts[i], 10)
+    const key = Number.isInteger(index) ? keys[index] : undefined
+    if (!key) continue
     let value = parts[i + 1]
     if (value.endsWith('\n')) value = value.slice(0, -1)
     result[key] = value

@@ -10,6 +10,7 @@ import {
   removeVar,
 } from '../lib/manager-service.js'
 import type { NamespaceVar } from '../lib/types.js'
+import { validateKey, validateNamespace } from '../lib/validation.js'
 
 type Action = 'set' | 'edit' | 'unset' | 'disable' | 'enable' | 'switch' | 'exit'
 
@@ -57,7 +58,7 @@ async function chooseNamespace(): Promise<string> {
   )
 
   if (selected !== '__new__') {
-    return selected
+    return validateNamespace(selected)
   }
 
   const created = expectPromptString(
@@ -70,7 +71,7 @@ async function chooseNamespace(): Promise<string> {
     }),
   )
 
-  return created.trim()
+  return validateNamespace(created)
 }
 
 async function chooseVar(namespace: string, action: string): Promise<string | null> {
@@ -110,15 +111,17 @@ async function printNamespace(namespace: string): Promise<void> {
 }
 
 async function handleSet(namespace: string): Promise<void> {
-  const key = expectPromptString(
-    await p.text({
-      message: 'Variable name',
-      placeholder: 'AWS_SECRET_ACCESS_KEY',
-      validate(value) {
-        return value.trim().length > 0 ? undefined : 'Variable name is required'
-      },
-    }),
-  ).trim()
+  const key = validateKey(
+    expectPromptString(
+      await p.text({
+        message: 'Variable name',
+        placeholder: 'AWS_SECRET_ACCESS_KEY',
+        validate(value) {
+          return value.trim().length > 0 ? undefined : 'Variable name is required'
+        },
+      }),
+    ),
+  )
 
   const value = await promptSecret(`${namespace}.${key} value`)
   await createOrUpdateVar(namespace, key, value)
