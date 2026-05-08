@@ -114,11 +114,7 @@ function assertNoCollisions(rows: ImportPlanRow[]): void {
   )
 }
 
-async function ensureGroupConsistent(
-  namespace: string,
-  key: string,
-  group: string,
-): Promise<void> {
+async function ensureGroupConsistent(namespace: string, key: string, group: string): Promise<void> {
   try {
     const detail = await getItemWithMeta(namespace, key)
     if (!detail.group) {

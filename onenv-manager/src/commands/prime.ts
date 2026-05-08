@@ -1,50 +1,9 @@
-export function printPrime(): void {
-  const xml = `<onenv version="0.1.0">
-1Password-backed secret management. All commands return structured JSON (--json or piped).
+import { getPackageVersion } from '../lib/version.js'
+import { buildPrimer } from './prime-data.js'
+import { renderXml } from './prime-xml.js'
 
-<workflow>
-  Project setup (once):
-    1. onenv set NAMESPACE KEY — store secrets through an interactive prompt
-    2. cd PROJECT &amp;&amp; onenv init — pick namespaces, saves .onenv.json
-    3. onenv run -- CMD — fetches secrets, injects as env vars, runs CMD
-
-  Ad-hoc:
-    onenv export ns1,ns2 -- CMD — run CMD with secrets injected
-    onenv export ns1,ns2 — output as JSON
-</workflow>
-
-<commands>
-  set ns key — Create or update a secret through an interactive prompt.
-  edit ns key — Update an existing secret's value through an interactive prompt.
-  unset ns key... — Delete secrets. onenv unset aws KEY1 KEY2
-  list [ns] — List namespaces (no arg) or variables in a namespace.
-  disable ns key... — Exclude from export without deleting.
-  enable ns key... — Re-include in export.
-  init — Interactive project setup, saves .onenv.json.
-  run -- cmd... — Run a command with project secrets as env vars.
-  export ns[,ns2] — Export enabled secrets as JSON.
-  export ns -- cmd... — Run cmd with secrets injected. onenv export porkbun -- python app.py
-</commands>
-
-<errors>
-  JSON: { code, message, category, retryable, hint?, suggestion? }
-  VALIDATION / NOT_FOUND / VAULT_NOT_FOUND — user_error, not retryable
-  OP_AUTH — transient, retryable
-  OP_ERROR — upstream, not retryable
-</errors>
-
-<api>
-  onenv-api provides HTTP access (requires AGENT_API_TOKEN).
-  POST http://localhost:4317/v1/env/export -H "x-onenv-token: TOKEN" -d '{"namespaces":["aws"]}'
-  Mutating calls require permission approval (desktop dialog or Telegram).
-</api>
-
-<config>
-  ONENV_VAULT (default: onenv) — vault name
-  ONENV_CATEGORY (default: API Credential) — item category
-  State: ~/.config/onenv-manager/state.json
-</config>
-</onenv>`
-
-  process.stdout.write(`${xml}\n`)
+export function printPrime(jsonMode: boolean): void {
+  const data = buildPrimer(getPackageVersion())
+  const text = jsonMode ? JSON.stringify(data, null, 2) : renderXml(data)
+  process.stdout.write(`${text}\n`)
 }

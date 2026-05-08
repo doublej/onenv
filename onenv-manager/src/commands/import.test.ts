@@ -35,11 +35,7 @@ describe('importJsonFile', () => {
     const { importJsonFile } = await import('./import.js')
     const { group, rows } = await importJsonFile('test', file)
     expect(group).toBe('config')
-    expect(rows.map((r) => r.key).sort()).toEqual([
-      'INSTALLED_CLIENT_ID',
-      'SCOPES_0',
-      'SCOPES_1',
-    ])
+    expect(rows.map((r) => r.key).sort()).toEqual(['INSTALLED_CLIENT_ID', 'SCOPES_0', 'SCOPES_1'])
     expect(setValueWithMeta).toHaveBeenCalledTimes(3)
     const call = setValueWithMeta.mock.calls.find(
       (args) => (args as unknown[])[1] === 'INSTALLED_CLIENT_ID',

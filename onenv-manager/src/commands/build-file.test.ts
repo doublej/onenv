@@ -43,9 +43,7 @@ describe('buildFile', () => {
   })
 
   it('writes to --out path with custom indent', async () => {
-    listGroupEntries.mockResolvedValue([
-      { key: 'A', value: 'x', path: 'a', type: 'string' },
-    ])
+    listGroupEntries.mockResolvedValue([{ key: 'A', value: 'x', path: 'a', type: 'string' }])
     const dir = mkdtempSync(join(tmpdir(), 'onenv-build-test-'))
     const out = join(dir, 'rebuilt.json')
     const { buildFile } = await import('./build-file.js')

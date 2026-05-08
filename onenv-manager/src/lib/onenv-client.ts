@@ -319,11 +319,20 @@ export async function listGroupEntries(namespace: string, group: string): Promis
   })
   return fetched
     .filter((e) => e.group === group && e.path !== undefined && e.type !== undefined)
-    .map((e) => ({ key: e.key, value: e.value, path: e.path as string, type: e.type as JsonLeafType }))
+    .map((e) => ({
+      key: e.key,
+      value: e.value,
+      path: e.path as string,
+      type: e.type as JsonLeafType,
+    }))
     .sort((a, b) => a.path.localeCompare(b.path))
 }
 
-async function mapWithLimit<I, O>(items: I[], limit: number, fn: (i: I) => Promise<O>): Promise<O[]> {
+async function mapWithLimit<I, O>(
+  items: I[],
+  limit: number,
+  fn: (i: I) => Promise<O>,
+): Promise<O[]> {
   const out: O[] = []
   let cursor = 0
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {

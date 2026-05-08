@@ -5,6 +5,7 @@ import { Command } from 'commander'
 import { buildFile } from './commands/build-file.js'
 import { importJsonFile } from './commands/import.js'
 import { printPrime } from './commands/prime.js'
+import { bindChildCleanup, prepareFileInjections } from './commands/run-files.js'
 import { runTui } from './commands/tui.js'
 import {
   createOrUpdateVar,
@@ -17,11 +18,7 @@ import {
   removeVar,
 } from './index.js'
 import { validationError } from './lib/errors.js'
-import {
-  getNamespaceVarsWithMeta,
-  listGroupsForNamespace,
-} from './lib/manager-service.js'
-import { materializeFile } from './lib/materialize.js'
+import { getNamespaceVarsWithMeta } from './lib/manager-service.js'
 import { ensureServiceAccountToken } from './lib/op-token.js'
 import { handleError, isJsonMode, output, setJsonMode, success } from './lib/output.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
@@ -198,11 +195,7 @@ program
   .argument('<namespace>', 'Namespace (supports @refs)')
   .argument('<file>', 'Path to a JSON file to import')
   .option('-g, --group <name>', 'Group name (defaults to filename without extension)')
-  .option(
-    '-k, --keys <strategy>',
-    'Key naming: upper-snake (default) or leaf',
-    'upper-snake',
-  )
+  .option('-k, --keys <strategy>', 'Key naming: upper-snake (default) or leaf', 'upper-snake')
   .option('-p, --prefix <prefix>', 'Prefix prepended to every derived key')
   .option('--dry-run', 'Print the import plan without writing')
   .action(
@@ -240,10 +233,7 @@ program
   .option('-o, --out <path>', 'Output path (default: stdout)')
   .option('--indent <n>', 'JSON indent width (default: 2)', (v) => Number.parseInt(v, 10), 2)
   .action(
-    async (
-      rawNamespace: string,
-      options: { group: string; out?: string; indent: number },
-    ) => {
+    async (rawNamespace: string, options: { group: string; out?: string; indent: number }) => {
       const namespace = validateNamespace(await resolveRef(rawNamespace))
       await buildFile(namespace, options.group, { out: options.out, indent: options.indent })
       await storeRefs([namespace])
@@ -305,82 +295,11 @@ program
       stdio: 'inherit',
       env: { ...process.env, ...values, ...fileEnv },
     })
-    bindCleanup(child, cleanups)
+    bindChildCleanup(child, cleanups)
   })
 
 function collectOption(value: string, prev: string[]): string[] {
   return [...prev, value]
-}
-
-interface FileInjectionResult {
-  fileEnv: Record<string, string>
-  cleanups: Array<() => void>
-}
-
-async function prepareFileInjections(
-  specs: string[],
-  namespaces: string[],
-): Promise<FileInjectionResult> {
-  const fileEnv: Record<string, string> = {}
-  const cleanups: Array<() => void> = []
-  for (const spec of specs) {
-    const parsed = parseFileSpec(spec)
-    const namespace = await resolveGroupNamespace(parsed.group, namespaces)
-    const { path, cleanup } = await materializeFile(namespace, parsed.group)
-    fileEnv[parsed.varName] = path
-    cleanups.push(cleanup)
-  }
-  return { fileEnv, cleanups }
-}
-
-function parseFileSpec(spec: string): { group: string; varName: string } {
-  const idx = spec.indexOf(':')
-  if (idx <= 0 || idx === spec.length - 1) {
-    throw validationError(`Invalid --file value: ${spec}`, 'Expected format: group:ENV_VAR')
-  }
-  return { group: spec.slice(0, idx), varName: spec.slice(idx + 1) }
-}
-
-async function resolveGroupNamespace(group: string, namespaces: string[]): Promise<string> {
-  const matches: string[] = []
-  for (const ns of namespaces) {
-    const groups = await listGroupsForNamespace(ns)
-    if (groups.includes(group)) matches.push(ns)
-  }
-  if (matches.length === 0) {
-    throw validationError(
-      `Group "${group}" not found in any project namespace`,
-      'Check the project namespaces in .onenv.json or run "onenv list <ns> --groups"',
-    )
-  }
-  if (matches.length > 1) {
-    throw validationError(
-      `Group "${group}" exists in multiple namespaces: ${matches.join(', ')}`,
-      'Rename the group in one namespace to disambiguate',
-    )
-  }
-  return matches[0]
-}
-
-function bindCleanup(
-  child: ReturnType<typeof spawn>,
-  cleanups: Array<() => void>,
-): void {
-  const runAll = () => {
-    for (const c of cleanups) c()
-  }
-  child.on('close', (code) => {
-    runAll()
-    process.exit(code ?? 1)
-  })
-  process.on('SIGINT', () => {
-    runAll()
-    child.kill('SIGINT')
-  })
-  process.on('SIGTERM', () => {
-    runAll()
-    child.kill('SIGTERM')
-  })
 }
 
 program
