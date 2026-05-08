@@ -77,24 +77,14 @@ function deriveGroupName(filePath: string): string {
 }
 
 function deriveKey(path: string, strategy: KeyStrategy, prefix: string): string {
-  const flat = strategy === 'leaf' ? lastSegment(path) : flattenPath(path)
-  return applyPrefix(prefix, flat || 'ROOT')
-}
-
-function flattenPath(path: string): string {
-  return path
-    .replace(/\[(\d+)\]/g, '_$1')
-    .replace(/\./g, '_')
-    .replace(/^_+/, '')
-    .toUpperCase()
-}
-
-function lastSegment(path: string): string {
-  const m = path.match(/([^.[]+)(?:\[\d+\])*$/)
-  return (m ? m[1] : '').toUpperCase()
-}
-
-function applyPrefix(prefix: string, key: string): string {
+  const raw =
+    strategy === 'leaf'
+      ? (path.match(/([^.[]+)(?:\[\d+\])*$/)?.[1] ?? '')
+      : path
+          .replace(/\[(\d+)\]/g, '_$1')
+          .replace(/\./g, '_')
+          .replace(/^_+/, '')
+  const key = raw.toUpperCase() || 'ROOT'
   return prefix ? `${prefix}_${key}` : key
 }
 

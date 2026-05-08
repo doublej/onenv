@@ -294,37 +294,31 @@ function readMetaFromItem(item: OpItemDetail): { value: string } & ItemMeta {
   return { value, group, path, type }
 }
 
+type FullItem = { key: string; value: string } & ItemMeta
+
+async function fetchAllItems(namespace: string): Promise<FullItem[]> {
+  const keys = await listKeys(namespace)
+  return await mapWithLimit(keys, PARALLEL_OP_LIMIT, async (key) => ({
+    key,
+    ...(await getItemWithMeta(namespace, key)),
+  }))
+}
+
 export async function listItemsWithMeta(namespace: string): Promise<ItemSummary[]> {
-  const items = await listItems(namespace)
-  const keys = items
-    .map((it) => parseTitle(it.title))
-    .filter((p): p is { namespace: string; key: string } => p?.namespace === namespace)
-    .map((p) => p.key)
-  const out = await mapWithLimit(keys, PARALLEL_OP_LIMIT, async (key) => {
-    const detail = await getItemWithMeta(namespace, key)
-    return { key, group: detail.group, path: detail.path, type: detail.type }
-  })
-  return out.sort((a, b) => a.key.localeCompare(b.key))
+  const all = await fetchAllItems(namespace)
+  return all
+    .map(({ key, group, path, type }) => ({ key, group, path, type }))
+    .sort((a, b) => a.key.localeCompare(b.key))
 }
 
 export async function listGroupEntries(namespace: string, group: string): Promise<GroupEntry[]> {
-  const items = await listItems(namespace)
-  const keys = items
-    .map((it) => parseTitle(it.title))
-    .filter((p): p is { namespace: string; key: string } => p?.namespace === namespace)
-    .map((p) => p.key)
-  const fetched = await mapWithLimit(keys, PARALLEL_OP_LIMIT, async (key) => {
-    const detail = await getItemWithMeta(namespace, key)
-    return { key, ...detail }
-  })
-  return fetched
-    .filter((e) => e.group === group && e.path !== undefined && e.type !== undefined)
-    .map((e) => ({
-      key: e.key,
-      value: e.value,
-      path: e.path as string,
-      type: e.type as JsonLeafType,
-    }))
+  const all = await fetchAllItems(namespace)
+  return all
+    .filter(
+      (e): e is FullItem & { path: string; type: JsonLeafType } =>
+        e.group === group && e.path !== undefined && e.type !== undefined,
+    )
+    .map(({ key, value, path, type }) => ({ key, value, path, type }))
     .sort((a, b) => a.path.localeCompare(b.path))
 }
 

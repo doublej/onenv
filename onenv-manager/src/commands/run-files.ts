@@ -64,12 +64,10 @@ export function bindChildCleanup(
     runAll()
     process.exit(code ?? 1)
   })
-  process.on('SIGINT', () => {
-    runAll()
-    child.kill('SIGINT')
-  })
-  process.on('SIGTERM', () => {
-    runAll()
-    child.kill('SIGTERM')
-  })
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+    process.on(sig, () => {
+      runAll()
+      child.kill(sig)
+    })
+  }
 }

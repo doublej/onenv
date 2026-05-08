@@ -15,52 +15,28 @@ export function flatten(input: unknown): FlatEntry[] {
 }
 
 function walk(value: unknown, path: string, out: FlatEntry[]): void {
-  if (value === null) {
-    emitLeaf(out, path, 'null', '')
-    return
-  }
-  if (Array.isArray(value)) {
-    walkArray(value, path, out)
-    return
-  }
-  if (typeof value === 'object') {
-    walkObject(value as Record<string, unknown>, path, out)
-    return
-  }
-  walkPrimitive(value, path, out)
+  if (value === null) emitLeaf(out, path, 'null', '')
+  else if (Array.isArray(value)) walkArray(value, path, out)
+  else if (typeof value === 'object') walkObject(value as Record<string, unknown>, path, out)
+  else emitPrimitive(value, path, out)
 }
 
-function walkPrimitive(value: unknown, path: string, out: FlatEntry[]): void {
-  if (typeof value === 'string') {
-    emitLeaf(out, path, 'string', value)
-    return
-  }
-  if (typeof value === 'number') {
-    emitLeaf(out, path, 'number', String(value))
-    return
-  }
-  if (typeof value === 'boolean') {
-    emitLeaf(out, path, 'boolean', value ? 'true' : 'false')
-    return
-  }
-  throw new Error(`unsupported JSON value at ${path || '<root>'}`)
+function emitPrimitive(value: unknown, path: string, out: FlatEntry[]): void {
+  if (typeof value === 'string') emitLeaf(out, path, 'string', value)
+  else if (typeof value === 'number') emitLeaf(out, path, 'number', String(value))
+  else if (typeof value === 'boolean') emitLeaf(out, path, 'boolean', value ? 'true' : 'false')
+  else throw new Error(`unsupported JSON value at ${path || '<root>'}`)
 }
 
 function walkArray(value: unknown[], path: string, out: FlatEntry[]): void {
-  if (value.length === 0) {
-    emitLeaf(out, path, 'empty-array', '')
-    return
-  }
-  for (let i = 0; i < value.length; i++) walk(value[i], `${path}[${i}]`, out)
+  if (value.length === 0) emitLeaf(out, path, 'empty-array', '')
+  else for (let i = 0; i < value.length; i++) walk(value[i], `${path}[${i}]`, out)
 }
 
 function walkObject(value: Record<string, unknown>, path: string, out: FlatEntry[]): void {
   const keys = Object.keys(value)
-  if (keys.length === 0) {
-    emitLeaf(out, path, 'empty-object', '')
-    return
-  }
-  for (const k of keys) walk(value[k], path ? `${path}.${k}` : k, out)
+  if (keys.length === 0) emitLeaf(out, path, 'empty-object', '')
+  else for (const k of keys) walk(value[k], path ? `${path}.${k}` : k, out)
 }
 
 function emitLeaf(out: FlatEntry[], path: string, type: JsonLeafType, value: string): void {
@@ -128,44 +104,17 @@ function assignLeaf(
   else (node as Record<string, unknown>)[last] = leaf
 }
 
+const PATH_RE = /\[(\d+)\]|\[([^\]]*)\]|([^.[]+)/g
+
 function parsePath(path: string): PathToken[] {
+  if (!path) return []
   const tokens: PathToken[] = []
-  const state = { cur: '', i: 0 }
-  while (state.i < path.length) {
-    consumeChar(path, state, tokens)
+  for (const m of path.matchAll(PATH_RE)) {
+    if (m[1] !== undefined) tokens.push(Number.parseInt(m[1], 10))
+    else if (m[2] !== undefined) throw new Error(`bad index in path: ${path}`)
+    else tokens.push(m[3])
   }
-  if (state.cur) tokens.push(state.cur)
   return tokens
-}
-
-function consumeChar(path: string, state: { cur: string; i: number }, tokens: PathToken[]): void {
-  const c = path[state.i]
-  if (c === '.') {
-    flushToken(state, tokens)
-    state.i++
-    return
-  }
-  if (c === '[') {
-    flushToken(state, tokens)
-    state.i = consumeBracket(path, state.i, tokens)
-    return
-  }
-  state.cur += c
-  state.i++
-}
-
-function flushToken(state: { cur: string }, tokens: PathToken[]): void {
-  if (state.cur) tokens.push(state.cur)
-  state.cur = ''
-}
-
-function consumeBracket(path: string, start: number, tokens: PathToken[]): number {
-  const end = path.indexOf(']', start)
-  if (end === -1) throw new Error(`unterminated bracket: ${path}`)
-  const idx = Number.parseInt(path.slice(start + 1, end), 10)
-  if (!Number.isInteger(idx) || idx < 0) throw new Error(`bad index: ${path}`)
-  tokens.push(idx)
-  return end + 1
 }
 
 function castLeaf(type: JsonLeafType, value: string, path: string): unknown {
@@ -191,13 +140,8 @@ function castNumber(value: string, path: string): number {
 }
 
 function validateNoHoles(value: unknown, path = ''): void {
-  if (Array.isArray(value)) {
-    validateArrayHoles(value, path)
-    return
-  }
-  if (value && typeof value === 'object') {
-    validateObjectHoles(value as Record<string, unknown>, path)
-  }
+  if (Array.isArray(value)) validateArrayHoles(value, path)
+  else if (value && typeof value === 'object') validateObjectHoles(value, path)
 }
 
 function validateArrayHoles(arr: unknown[], path: string): void {
@@ -207,8 +151,8 @@ function validateArrayHoles(arr: unknown[], path: string): void {
   }
 }
 
-function validateObjectHoles(obj: Record<string, unknown>, path: string): void {
-  for (const k of Object.keys(obj)) {
-    validateNoHoles(obj[k], path ? `${path}.${k}` : k)
+function validateObjectHoles(obj: object, path: string): void {
+  for (const [k, v] of Object.entries(obj)) {
+    validateNoHoles(v, path ? `${path}.${k}` : k)
   }
 }
