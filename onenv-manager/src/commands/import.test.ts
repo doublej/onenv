@@ -42,8 +42,8 @@ describe('importJsonFile', () => {
     ])
     expect(setValueWithMeta).toHaveBeenCalledTimes(3)
     const call = setValueWithMeta.mock.calls.find(
-      ([, k]: unknown[]) => k === 'INSTALLED_CLIENT_ID',
-    )
+      (args) => (args as unknown[])[1] === 'INSTALLED_CLIENT_ID',
+    ) as unknown[] | undefined
     expect(call?.[2]).toBe('abc')
     expect(call?.[3]).toEqual({ group: 'config', path: 'installed.client_id', type: 'string' })
   })
