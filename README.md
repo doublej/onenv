@@ -9,6 +9,23 @@ Two pieces, sharing a 1Password vault:
 
 Secrets live in a 1Password vault as `namespace/KEY` items. No plaintext on disk.
 
+## Features
+
+- **`.env` replacement** — `KEY=value` ergonomics, but values live in a 1Password vault; nothing on disk
+- **`onenv run -- <cmd>`** — fetches per-project secrets, injects as env vars, execs your command
+- **JSON file support** — `onenv import` flattens a JSON file (GCP service accounts, OAuth tokens, kubeconfigs) into per-leaf onenv keys; `onenv run --file group:VAR` materializes the rebuilt JSON to a `0600` tempfile and exposes its path. Per-field rotation, no plaintext JSON on disk.
+- **`onenv build-file`** — reassemble the original JSON shape from stored leaves (with type preservation: numbers stay numbers, empty containers round-trip)
+- **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
+- **Disable without deleting** — `onenv disable <key>` keeps the secret in 1Password but excludes it from `run`/`export`; `enable` restores it
+- **Interactive TUI** — `@clack/prompts`-based menu for browsing/editing without typing commands
+- **Agent HTTP API** — `onenv-api` exposes the same surface over HTTP with permission brokering (desktop AppleScript dialog or Telegram approval) on every mutation
+- **Agent primer** — `onenv prime` emits a complete spec (commands, errors, state files, HTTP endpoints) as XML or JSON for dropping into agent context
+- **`@`-refs** — positional shorthand against the last namespace list (`@1`, `@2`, `@last`) for fast repeat work
+- **Service-account ready** — `OP_SERVICE_ACCOUNT_TOKEN` accepts a literal `ops_eyJ...` token *or* an `op://...` reference; resolved once and cached at `~/.config/onenv-manager/op-token` (mode 0600), self-heals on auth failure
+- **Grouped listing** — `onenv list <ns> --groups` buckets keys by their reassembly group, with `(ungrouped)` for flat secrets
+- **JSON output** — every command emits machine-readable JSON when piped or with `--json`; structured error envelope with codes, categories, retryable flag
+- **Audit + rotation** — 1Password tracks every read; rotate by overwriting the item — no redeploy
+
 ## Why
 
 `.env` files leak. They sit unencrypted next to source, drift between machines, get pasted into chat, end up in `git status` more often than they should, and nobody ever rotates the keys. Sharing them means Slack DMs and stale copies on three laptops.
@@ -75,29 +92,64 @@ $ onenv run -- node -e 'console.log(process.env.AWS_REGION)'
 eu-west-1
 
 $ onenv prime
-<onenv-project>
-  <namespace name="aws">
-    <key>AWS_ACCESS_KEY_ID</key>
-    <key>AWS_SECRET_ACCESS_KEY</key>
-    <key>AWS_REGION</key>
-  </namespace>
-</onenv-project>
+<onenv version="0.3.0">
+
+<summary>
+1Password-backed secret management. CLI (onenv) for humans + scripts; HTTP API
+(onenv-api) for agents with permission brokering. ...
+</summary>
+
+<setup>
+Authenticate via service account (headless) or interactive op signin. ...
+</setup>
+
+<commands>
+set <ns> <key>
+  Create or update a secret. Reads the value from an interactive password prompt.
+  ...
+</commands>
+
+<api>
+Local HTTP server (onenv-api) for agent-driven access. ...
+</api>
+
+</onenv>
 ```
+
+`onenv prime` is a complete agent primer — every command, error code, state file, and HTTP endpoint with request/response shape. Use `--json` (or pipe) for a structured JSON object with the same content.
 
 ## Usage
 
 ```bash
-onenv prime                              # XML primer of project's namespaces + keys
+onenv prime                              # XML primer of the CLI + API surface
 onenv list                               # all namespaces / keys you have access to
 onenv list aws                           # keys in one namespace
+onenv list aws --groups                  # bucket keys by reassembly group
 onenv set <ns> <KEY>                     # add/overwrite (interactive prompt)
 onenv unset <ns> <KEY>                   # delete
 onenv disable <ns> <KEY>                 # hide without delete
 onenv enable <ns> <KEY>                  # restore
 onenv run -- <cmd>                       # run command with project secrets injected
+onenv run --file group:VAR -- <cmd>      # also materialize a JSON file, expose its path as VAR
+onenv import <ns> <file.json>            # flatten a JSON file into onenv keys
+onenv build-file <ns> --group <name>     # reassemble the JSON file from stored leaves
 onenv export <ns[,ns2]>                  # print enabled values as JSON
 onenv tui                                # interactive
 ```
+
+### JSON files (service accounts, OAuth tokens, kubeconfigs)
+
+Some tools want a file path instead of env vars. Import the JSON once, store every leaf as a separate onenv key, and rebuild on demand:
+
+```bash
+onenv import google /tmp/sa.json --group sa     # one onenv key per JSON leaf
+onenv list google --groups                      # see the sa group's keys
+onenv build-file google --group sa              # rebuild the original JSON to stdout
+onenv run --file sa:GOOGLE_APPLICATION_CREDENTIALS -- python app.py
+# tempfile lives under XDG_RUNTIME_DIR with mode 0600, removed on child exit
+```
+
+Per-field rotation works the same as flat secrets. Empty containers and types (numbers, booleans, nulls) round-trip exactly.
 
 ## Agent API
 
