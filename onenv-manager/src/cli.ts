@@ -2,6 +2,8 @@
 import { spawn } from 'node:child_process'
 import * as p from '@clack/prompts'
 import { Command } from 'commander'
+import { buildFile } from './commands/build-file.js'
+import { importJsonFile } from './commands/import.js'
 import { printPrime } from './commands/prime.js'
 import { runTui } from './commands/tui.js'
 import {
@@ -15,15 +17,22 @@ import {
   removeVar,
 } from './index.js'
 import { validationError } from './lib/errors.js'
+import {
+  getNamespaceVarsWithMeta,
+  listGroupsForNamespace,
+} from './lib/manager-service.js'
+import { materializeFile } from './lib/materialize.js'
 import { ensureServiceAccountToken } from './lib/op-token.js'
-import { handleError, output, setJsonMode, success } from './lib/output.js'
+import { handleError, isJsonMode, output, setJsonMode, success } from './lib/output.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
 import { resolveRef, storeRefs } from './lib/ref-store.js'
+import type { NamespaceVar } from './lib/types.js'
 import { validateKey, validateNamespace } from './lib/validation.js'
+import { getPackageVersion } from './lib/version.js'
 
 const program = new Command()
   .name('onenv')
-  .version('0.2.0')
+  .version(getPackageVersion())
   .description('Manage 1Password-backed variables with an interactive TUI and scriptable commands.')
   .option('--json', 'Force JSON output (default when piped)')
 
@@ -61,9 +70,9 @@ function argsAfterDoubleDash(): string[] | null {
 
 program
   .command('prime')
-  .description('Print XML primer for agent consumption')
+  .description('Print agent primer (XML by default; JSON when --json or stdout is not a TTY)')
   .action(() => {
-    printPrime()
+    printPrime(isJsonMode())
   })
 
 program
@@ -77,7 +86,8 @@ program
   .command('list')
   .description('List namespaces or variables in a namespace')
   .argument('[namespace]', 'Namespace (supports @refs)')
-  .action(async (rawNamespace?: string) => {
+  .option('--groups', 'Group keys by their group field (slower: fetches metadata per item)')
+  .action(async (rawNamespace: string | undefined, options: { groups?: boolean }) => {
     if (!rawNamespace) {
       const namespaces = await getNamespaces()
       await storeRefs(namespaces)
@@ -85,10 +95,23 @@ program
       return
     }
     const namespace = validateNamespace(await resolveRef(rawNamespace))
-    const vars = await getNamespaceVars(namespace)
     await storeRefs([namespace])
-    output(vars)
+    if (options.groups) {
+      output(groupVars(await getNamespaceVarsWithMeta(namespace)))
+      return
+    }
+    output(await getNamespaceVars(namespace))
   })
+
+function groupVars(vars: NamespaceVar[]): Record<string, NamespaceVar[]> {
+  const buckets: Record<string, NamespaceVar[]> = {}
+  for (const v of vars) {
+    const g = v.group ?? '(ungrouped)'
+    if (!buckets[g]) buckets[g] = []
+    buckets[g].push(v)
+  }
+  return buckets
+}
 
 program
   .command('set')
@@ -170,6 +193,71 @@ program
   })
 
 program
+  .command('import')
+  .description('Flatten a JSON file into onenv keys with reassembly metadata')
+  .argument('<namespace>', 'Namespace (supports @refs)')
+  .argument('<file>', 'Path to a JSON file to import')
+  .option('-g, --group <name>', 'Group name (defaults to filename without extension)')
+  .option(
+    '-k, --keys <strategy>',
+    'Key naming: upper-snake (default) or leaf',
+    'upper-snake',
+  )
+  .option('-p, --prefix <prefix>', 'Prefix prepended to every derived key')
+  .option('--dry-run', 'Print the import plan without writing')
+  .action(
+    async (
+      rawNamespace: string,
+      file: string,
+      options: { group?: string; keys?: string; prefix?: string; dryRun?: boolean },
+    ) => {
+      const namespace = validateNamespace(await resolveRef(rawNamespace))
+      const strategy = options.keys === 'leaf' ? 'leaf' : 'upper-snake'
+      const result = await importJsonFile(namespace, file, {
+        group: options.group,
+        keys: strategy,
+        prefix: options.prefix,
+        dryRun: options.dryRun,
+      })
+      await storeRefs([namespace])
+      if (options.dryRun) {
+        output({ namespace, group: result.group, plan: result.rows })
+        return
+      }
+      success(`Imported ${result.rows.length} keys into ${namespace} (group: ${result.group})`, {
+        namespace,
+        group: result.group,
+        count: result.rows.length,
+      })
+    },
+  )
+
+program
+  .command('build-file')
+  .description('Reassemble a grouped JSON file from onenv keys')
+  .argument('<namespace>', 'Namespace (supports @refs)')
+  .requiredOption('-g, --group <name>', 'Group name to rebuild')
+  .option('-o, --out <path>', 'Output path (default: stdout)')
+  .option('--indent <n>', 'JSON indent width (default: 2)', (v) => Number.parseInt(v, 10), 2)
+  .action(
+    async (
+      rawNamespace: string,
+      options: { group: string; out?: string; indent: number },
+    ) => {
+      const namespace = validateNamespace(await resolveRef(rawNamespace))
+      await buildFile(namespace, options.group, { out: options.out, indent: options.indent })
+      await storeRefs([namespace])
+      if (options.out) {
+        success(`Wrote ${options.out}`, {
+          namespace,
+          group: options.group,
+          out: options.out,
+        })
+      }
+    },
+  )
+
+program
   .command('init')
   .description('Set up .onenv.json for the current project')
   .action(async () => {
@@ -198,21 +286,102 @@ program
   .command('run')
   .description('Run project command with secrets injected from .onenv.json')
   .argument('[-- command...]', 'Command to run with exported vars as env')
+  .option(
+    '-f, --file <spec>',
+    'Materialize a grouped JSON file and expose its path: group:ENV_VAR',
+    collectOption,
+    [] as string[],
+  )
   .allowExcessArguments(true)
-  .action(async () => {
+  .action(async (options: { file: string[] }) => {
     const config = await readProjectConfig()
     const values = await exportEnabledValues(config.namespaces)
     const cmd = argsAfterDoubleDash()
     if (!cmd || cmd.length === 0) {
       throw validationError('No command provided after --', 'onenv run -- node app.js')
     }
-
+    const { fileEnv, cleanups } = await prepareFileInjections(options.file ?? [], config.namespaces)
     const child = spawn(cmd[0], cmd.slice(1), {
       stdio: 'inherit',
-      env: { ...process.env, ...values },
+      env: { ...process.env, ...values, ...fileEnv },
     })
-    child.on('close', (code) => process.exit(code ?? 1))
+    bindCleanup(child, cleanups)
   })
+
+function collectOption(value: string, prev: string[]): string[] {
+  return [...prev, value]
+}
+
+interface FileInjectionResult {
+  fileEnv: Record<string, string>
+  cleanups: Array<() => void>
+}
+
+async function prepareFileInjections(
+  specs: string[],
+  namespaces: string[],
+): Promise<FileInjectionResult> {
+  const fileEnv: Record<string, string> = {}
+  const cleanups: Array<() => void> = []
+  for (const spec of specs) {
+    const parsed = parseFileSpec(spec)
+    const namespace = await resolveGroupNamespace(parsed.group, namespaces)
+    const { path, cleanup } = await materializeFile(namespace, parsed.group)
+    fileEnv[parsed.varName] = path
+    cleanups.push(cleanup)
+  }
+  return { fileEnv, cleanups }
+}
+
+function parseFileSpec(spec: string): { group: string; varName: string } {
+  const idx = spec.indexOf(':')
+  if (idx <= 0 || idx === spec.length - 1) {
+    throw validationError(`Invalid --file value: ${spec}`, 'Expected format: group:ENV_VAR')
+  }
+  return { group: spec.slice(0, idx), varName: spec.slice(idx + 1) }
+}
+
+async function resolveGroupNamespace(group: string, namespaces: string[]): Promise<string> {
+  const matches: string[] = []
+  for (const ns of namespaces) {
+    const groups = await listGroupsForNamespace(ns)
+    if (groups.includes(group)) matches.push(ns)
+  }
+  if (matches.length === 0) {
+    throw validationError(
+      `Group "${group}" not found in any project namespace`,
+      'Check the project namespaces in .onenv.json or run "onenv list <ns> --groups"',
+    )
+  }
+  if (matches.length > 1) {
+    throw validationError(
+      `Group "${group}" exists in multiple namespaces: ${matches.join(', ')}`,
+      'Rename the group in one namespace to disambiguate',
+    )
+  }
+  return matches[0]
+}
+
+function bindCleanup(
+  child: ReturnType<typeof spawn>,
+  cleanups: Array<() => void>,
+): void {
+  const runAll = () => {
+    for (const c of cleanups) c()
+  }
+  child.on('close', (code) => {
+    runAll()
+    process.exit(code ?? 1)
+  })
+  process.on('SIGINT', () => {
+    runAll()
+    child.kill('SIGINT')
+  })
+  process.on('SIGTERM', () => {
+    runAll()
+    child.kill('SIGTERM')
+  })
+}
 
 program
   .command('export')
