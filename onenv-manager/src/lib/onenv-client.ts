@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CliError, opError } from './errors.js'
 import { clearTokenCache } from './op-token.js'
+import type { JsonLeafType } from './types.js'
 
 const ONENV_VAULT = process.env.ONENV_VAULT ?? 'onenv'
 const ONENV_CATEGORY = process.env.ONENV_CATEGORY ?? 'API Credential'
@@ -202,7 +203,39 @@ function upsertField(item: OpItemDetail, id: string, type: string, value: string
   item.fields.push({ id, type, value, label: id })
 }
 
+export interface ItemMeta {
+  group?: string
+  path?: string
+  type?: JsonLeafType
+}
+
+export interface ItemSummary {
+  key: string
+  group?: string
+  path?: string
+  type?: JsonLeafType
+}
+
+export interface GroupEntry {
+  key: string
+  value: string
+  path: string
+  type: JsonLeafType
+}
+
+const META_FIELD_IDS: Array<keyof ItemMeta> = ['group', 'path', 'type']
+const PARALLEL_OP_LIMIT = 10
+
 export async function setValue(namespace: string, key: string, value: string): Promise<void> {
+  await setValueWithMeta(namespace, key, value, {})
+}
+
+export async function setValueWithMeta(
+  namespace: string,
+  key: string,
+  value: string,
+  meta: ItemMeta,
+): Promise<void> {
   const title = `${namespace}/${key}`
   const expires = expiresIn90Days()
   const check = await execOp(['item', 'get', title, '--vault', ONENV_VAULT, '--format', 'json'])
@@ -211,6 +244,7 @@ export async function setValue(namespace: string, key: string, value: string): P
     const item = JSON.parse(check.stdout) as OpItemDetail
     upsertField(item, 'credential', 'CONCEALED', value)
     upsertField(item, 'expires', 'DATE', expires)
+    applyMetaFields(item, meta)
     await runOp(['item', 'edit', title, '--vault', ONENV_VAULT], JSON.stringify(item))
     return
   }
@@ -225,10 +259,82 @@ export async function setValue(namespace: string, key: string, value: string): P
       { id: 'expires', type: 'DATE', value: expires, label: 'expires' },
     ],
   }
+  applyMetaFields(template, meta)
   await runOp(
     ['item', 'create', '-', '--vault', ONENV_VAULT, '--category', ONENV_CATEGORY],
     JSON.stringify(template),
   )
+}
+
+function applyMetaFields(item: OpItemDetail, meta: ItemMeta): void {
+  for (const id of META_FIELD_IDS) {
+    const v = meta[id]
+    if (v !== undefined) upsertField(item, id, 'STRING', v)
+  }
+}
+
+export async function getItemWithMeta(
+  namespace: string,
+  key: string,
+): Promise<{ value: string } & ItemMeta> {
+  const title = `${namespace}/${key}`
+  const raw = await runOp(['item', 'get', title, '--vault', ONENV_VAULT, '--format', 'json'])
+  const item = JSON.parse(raw) as OpItemDetail
+  return readMetaFromItem(item)
+}
+
+function readMetaFromItem(item: OpItemDetail): { value: string } & ItemMeta {
+  const fields = item.fields ?? []
+  const find = (id: string) => fields.find((f) => f.id === id)?.value
+  const value = find('credential') ?? ''
+  const group = find('group')
+  const path = find('path')
+  const typeRaw = find('type')
+  const type = typeRaw === undefined ? undefined : (typeRaw as JsonLeafType)
+  return { value, group, path, type }
+}
+
+export async function listItemsWithMeta(namespace: string): Promise<ItemSummary[]> {
+  const items = await listItems(namespace)
+  const keys = items
+    .map((it) => parseTitle(it.title))
+    .filter((p): p is { namespace: string; key: string } => p?.namespace === namespace)
+    .map((p) => p.key)
+  const out = await mapWithLimit(keys, PARALLEL_OP_LIMIT, async (key) => {
+    const detail = await getItemWithMeta(namespace, key)
+    return { key, group: detail.group, path: detail.path, type: detail.type }
+  })
+  return out.sort((a, b) => a.key.localeCompare(b.key))
+}
+
+export async function listGroupEntries(namespace: string, group: string): Promise<GroupEntry[]> {
+  const items = await listItems(namespace)
+  const keys = items
+    .map((it) => parseTitle(it.title))
+    .filter((p): p is { namespace: string; key: string } => p?.namespace === namespace)
+    .map((p) => p.key)
+  const fetched = await mapWithLimit(keys, PARALLEL_OP_LIMIT, async (key) => {
+    const detail = await getItemWithMeta(namespace, key)
+    return { key, ...detail }
+  })
+  return fetched
+    .filter((e) => e.group === group && e.path !== undefined && e.type !== undefined)
+    .map((e) => ({ key: e.key, value: e.value, path: e.path as string, type: e.type as JsonLeafType }))
+    .sort((a, b) => a.path.localeCompare(b.path))
+}
+
+async function mapWithLimit<I, O>(items: I[], limit: number, fn: (i: I) => Promise<O>): Promise<O[]> {
+  const out: O[] = []
+  let cursor = 0
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const i = cursor++
+      if (i >= items.length) return
+      out.push(await fn(items[i]))
+    }
+  })
+  await Promise.all(workers)
+  return out
 }
 
 export async function unsetValue(namespace: string, key: string): Promise<void> {
