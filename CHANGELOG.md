@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`onenv import <ns> <file>`** — flatten a JSON file into one onenv key per leaf, with reassembly metadata (`group`, `path`, `type`) stored as 1Password STRING fields on each item. `--group` overrides the default (filename without extension); `--keys upper-snake|leaf` controls key naming; `--prefix` disambiguates collisions; `--dry-run` prints the plan without writing. Empty objects/arrays are preserved via sentinel entries so round-trips are exact.
+- **`onenv build-file <ns> --group <name>`** — reassemble the grouped JSON from onenv keys, casting each leaf back to its JSON type. Optional `--out <path>` writes the file (default: stdout); `--indent <n>` controls formatting. Errors loudly on missing array indices or type mismatches.
+- **`onenv run --file <group:VAR>`** — repeatable: materializes the rebuilt JSON for a group into a `0600` tempfile under `XDG_RUNTIME_DIR` (fallback: OS tmpdir) and exposes its absolute path as the named env var. Cleans up on child exit, SIGINT, and SIGTERM. Group names must be unique across the project's namespaces.
+- **`onenv list <ns> --groups`** — bucket keys by their reassembly group, with `(ungrouped)` for flat secrets. Uses per-item metadata fetches; documented as slower than the bare list.
+
+## 0.3.0 — 2026-05-08
+
+### Changed
+
+- **`onenv prime` is now a complete agent primer.** Rewrote the output to cover what a blank agent actually needs to use the CLI and API on first try: service-account token forms, vault/category config, namespace + key regexes, the bare-key injection footgun for `export`/`run`, `@`-ref syntax, every command's output shape, the full `errors` envelope with all codes, every state file, and the full `onenv-api` surface (auth header, rate limits, every endpoint with request/response shape, error responses, blocking permission semantics).
+- **`onenv prime` is JSON-aware.** Emits XML by default; emits a structured JSON object with the same content when `--json` is set or stdout is not a TTY, so piped consumers don't get an XML payload they can't parse.
+- **Version is read from `package.json` at runtime.** `onenv --version` and `<onenv version="...">` in the primer now read from the manifest, eliminating the previous hardcoded literal that drifted on releases.
+
 ## 0.2.0 — 2026-05-04
 
 ### Fixed
