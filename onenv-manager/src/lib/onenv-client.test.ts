@@ -31,11 +31,6 @@ function fakeChild(stdout = '', stderr = '', code = 0): FakeChild {
   return child
 }
 
-function lastStdin(child: FakeChild): string {
-  const calls = child.stdin.end.mock.calls
-  return calls.length === 0 ? '' : String(calls[calls.length - 1][0] ?? '')
-}
-
 const sampleItems = [
   { id: 'a1', title: 'aws/AWS_KEY', tags: ['aws'] },
   { id: 'a2', title: 'aws/AWS_SECRET', tags: ['aws'] },
@@ -111,31 +106,34 @@ describe('onenv-client', () => {
     expect(await listValues('missing')).toEqual({})
   })
 
-  it('setValue creates a new item with secret piped via stdin', async () => {
+  it('setValue creates a new item using a template file', async () => {
     let createArgs: readonly string[] = []
-    let createChild: FakeChild | null = null
+    let createTemplate: string | null = null
     vi.mocked(cp.spawn)
       .mockImplementationOnce((() => fakeChild('', 'item not found', 1)) as never)
       .mockImplementationOnce(((_cmd: string, args: readonly string[]) => {
         createArgs = args
-        createChild = fakeChild('ok')
-        return createChild as never
+        const idx = args.indexOf('--template')
+        if (idx >= 0) createTemplate = readFileSync(args[idx + 1], 'utf-8')
+        return fakeChild('ok') as never
       }) as never)
     const { setValue } = await import('./onenv-client.js')
     await setValue('aws', 'AWS_KEY', 'secret')
     expect(createArgs).toContain('create')
-    expect(createArgs).toContain('-')
+    expect(createArgs).toContain('--template')
     expect(createArgs).toContain('--category')
+    expect(createArgs).not.toContain('-')
     expect(createArgs).not.toContain('credential=secret')
-    const stdin = JSON.parse(lastStdin(createChild as unknown as FakeChild))
-    expect(stdin).not.toHaveProperty('category')
-    expect(stdin.title).toBe('aws/AWS_KEY')
-    expect(stdin.fields.find((f: OpField) => f.id === 'credential').value).toBe('secret')
+    expect(createTemplate).not.toBeNull()
+    const written = JSON.parse(createTemplate as unknown as string)
+    expect(written).not.toHaveProperty('category')
+    expect(written.title).toBe('aws/AWS_KEY')
+    expect(written.fields.find((f: OpField) => f.id === 'credential').value).toBe('secret')
   })
 
-  it('setValue edits existing item via stdin-piped JSON', async () => {
+  it('setValue edits existing item using a template file', async () => {
     let editArgs: readonly string[] = []
-    let editChild: FakeChild | null = null
+    let editTemplate: string | null = null
     const existing = {
       id: 'x',
       title: 'aws/AWS_KEY',
@@ -145,16 +143,19 @@ describe('onenv-client', () => {
       .mockImplementationOnce((() => fakeChild(JSON.stringify(existing))) as never)
       .mockImplementationOnce(((_cmd: string, args: readonly string[]) => {
         editArgs = args
-        editChild = fakeChild('ok')
-        return editChild as never
+        const idx = args.indexOf('--template')
+        if (idx >= 0) editTemplate = readFileSync(args[idx + 1], 'utf-8')
+        return fakeChild('ok') as never
       }) as never)
     const { setValue } = await import('./onenv-client.js')
     await setValue('aws', 'AWS_KEY', 'newsecret')
     expect(editArgs).toContain('edit')
     expect(editArgs).toContain('aws/AWS_KEY')
+    expect(editArgs).toContain('--template')
     expect(editArgs).not.toContain('credential=newsecret')
-    const stdin = JSON.parse(lastStdin(editChild as unknown as FakeChild))
-    expect(stdin.fields.find((f: OpField) => f.id === 'credential').value).toBe('newsecret')
+    expect(editTemplate).not.toBeNull()
+    const written = JSON.parse(editTemplate as unknown as string)
+    expect(written.fields.find((f: OpField) => f.id === 'credential').value).toBe('newsecret')
   })
 
   it('unsetValue deletes the item', async () => {

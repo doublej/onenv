@@ -82,6 +82,17 @@ async function runOpInject(template: string): Promise<string> {
   }
 }
 
+async function withTemplateFile<T>(json: string, fn: (path: string) => Promise<T>): Promise<T> {
+  const dir = mkdtempSync(join(tmpdir(), 'onenv-template-'))
+  const file = join(dir, 'template.json')
+  writeFileSync(file, json, { mode: 0o600 })
+  try {
+    return await fn(file)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
 interface OpItem {
   id: string
   title: string
@@ -245,7 +256,9 @@ export async function setValueWithMeta(
     upsertField(item, 'credential', 'CONCEALED', value)
     upsertField(item, 'expires', 'DATE', expires)
     applyMetaFields(item, meta)
-    await runOp(['item', 'edit', title, '--vault', ONENV_VAULT], JSON.stringify(item))
+    await withTemplateFile(JSON.stringify(item), (file) =>
+      runOp(['item', 'edit', title, '--vault', ONENV_VAULT, '--template', file]),
+    )
     return
   }
 
@@ -259,13 +272,21 @@ export async function setValueWithMeta(
     ],
   }
   applyMetaFields(template, meta)
-  // op CLI quirks: under a service account, `op item create` requires
-  // `--category` as a flag and rejects a `category` field in the stdin JSON.
-  // Under biometric auth it accepts either. Pass it as a flag and omit
-  // `category` from the template so both paths work.
-  await runOp(
-    ['item', 'create', '-', '--vault', ONENV_VAULT, '--category', ONENV_CATEGORY],
-    JSON.stringify(template),
+  // op 2.24+ silently ignores stdin templates ('-') passed via Node spawn pipes
+  // (works fine via shell pipes — looks like a TTY/buffering quirk in op).
+  // Use `--template <file>` instead. SA mode also requires `--category` as a
+  // flag and rejects a `category` field in the template, so we omit it.
+  await withTemplateFile(JSON.stringify(template), (file) =>
+    runOp([
+      'item',
+      'create',
+      '--template',
+      file,
+      '--vault',
+      ONENV_VAULT,
+      '--category',
+      ONENV_CATEGORY,
+    ]),
   )
 }
 
