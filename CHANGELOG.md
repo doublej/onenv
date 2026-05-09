@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- **Tag scheme is now `onenv:<namespace>`** — every onenv-managed 1Password item carries an `onenv:` prefix on its tag (instead of just the bare namespace), so the vault can hold non-onenv items without confusion and the CLI's filter is unambiguous about ownership. Existing items need a one-time tag rewrite (write-via-template; `op item edit --tags` appends silently rather than replacing).
+- **Item create/edit now uses `--template <file>`** instead of stdin (`-`). 1Password CLI 2.24+ silently ignores stdin templates passed through Node's `child_process` pipes, creating empty default-category items with no error. Switched both code paths to write a `0600` tempfile and pass `--template`.
+
 ### Added
 
 - **`onenv import <ns> <file>`** — flatten a JSON file into one onenv key per leaf, with reassembly metadata (`group`, `path`, `type`) stored as 1Password STRING fields on each item. `--group` overrides the default (filename without extension); `--keys upper-snake|leaf` controls key naming; `--prefix` disambiguates collisions; `--dry-run` prints the plan without writing. Empty objects/arrays are preserved via sentinel entries so round-trips are exact.

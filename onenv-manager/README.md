@@ -16,7 +16,7 @@ Terminal UI + CLI wrapper for [1Password CLI](https://developer.1password.com/do
 - **JSON output** — every command emits machine-readable JSON when piped or with `--json`; structured error envelope with codes, categories, retryable flag
 - **Agent primer** — `onenv prime` emits a complete spec of commands, state files, errors, and the API surface as XML or JSON
 
-Secrets are stored as `API Credential` items in a configurable 1Password vault (default: `onenv`). Each item is tagged with its namespace and titled `namespace/KEY`. Group/path/type metadata for imported JSON files lives on each item as STRING fields.
+Secrets are stored as `API Credential` items in a configurable 1Password vault (default: `onenv`). Each item is titled `namespace/KEY` and tagged `onenv:<namespace>` — the `onenv:` prefix marks it as managed by this tool and is the filter the CLI uses, so other items in the vault are ignored. Group/path/type metadata for imported JSON files lives on each item as STRING fields.
 
 Disabled state is tracked in:
 `~/.config/onenv-manager/state.json` (or `$XDG_CONFIG_HOME/onenv-manager/state.json`).

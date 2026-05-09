@@ -120,7 +120,7 @@ export function buildPrimer(version: string): PrimerData {
       vault: 'ONENV_VAULT (default: "onenv")',
       category: 'ONENV_CATEGORY (default: "API Credential")',
       item_layout:
-        'Each secret is a 1Password item titled "namespace/KEY", tagged with the namespace, with the secret value in the "credential" field.',
+        'Each secret is a 1Password item titled "namespace/KEY", tagged "onenv:<namespace>" (the prefix marks it as managed by onenv and is the filter the CLI uses), with the secret value in the "credential" field.',
     },
     naming: {
       namespace_regex: '^[A-Za-z0-9][A-Za-z0-9_.-]*$',
