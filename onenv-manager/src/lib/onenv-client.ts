@@ -251,7 +251,6 @@ export async function setValueWithMeta(
 
   const template: OpItemDetail = {
     title,
-    category: 'API_CREDENTIAL',
     vault: { name: ONENV_VAULT },
     tags: [namespace],
     fields: [
@@ -260,10 +259,14 @@ export async function setValueWithMeta(
     ],
   }
   applyMetaFields(template, meta)
-  // op 2.24+ silently ignores the stdin template when `-` and `--category` are
-  // both passed (creates an empty default item). Drop `--category` and keep
-  // the `-` sentinel so op reads stdin; the template carries the category.
-  await runOp(['item', 'create', '-', '--vault', ONENV_VAULT], JSON.stringify(template))
+  // op CLI quirks: under a service account, `op item create` requires
+  // `--category` as a flag and rejects a `category` field in the stdin JSON.
+  // Under biometric auth it accepts either. Pass it as a flag and omit
+  // `category` from the template so both paths work.
+  await runOp(
+    ['item', 'create', '-', '--vault', ONENV_VAULT, '--category', ONENV_CATEGORY],
+    JSON.stringify(template),
+  )
 }
 
 function applyMetaFields(item: OpItemDetail, meta: ItemMeta): void {
