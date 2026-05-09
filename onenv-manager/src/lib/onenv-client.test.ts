@@ -124,7 +124,7 @@ describe('onenv-client', () => {
     const { setValue } = await import('./onenv-client.js')
     await setValue('aws', 'AWS_KEY', 'secret')
     expect(createArgs).toContain('create')
-    expect(createArgs).not.toContain('-')
+    expect(createArgs).toContain('-')
     expect(createArgs).not.toContain('--category')
     expect(createArgs).not.toContain('credential=secret')
     const stdin = JSON.parse(lastStdin(createChild as unknown as FakeChild))

@@ -261,10 +261,9 @@ export async function setValueWithMeta(
   }
   applyMetaFields(template, meta)
   // op 2.24+ silently ignores the stdin template when `-` and `--category` are
-  // both passed: it falls back to the default category template, producing
-  // titleless empty items. Pipe JSON via stdin only and let it carry the
-  // category itself.
-  await runOp(['item', 'create', '--vault', ONENV_VAULT], JSON.stringify(template))
+  // both passed (creates an empty default item). Drop `--category` and keep
+  // the `-` sentinel so op reads stdin; the template carries the category.
+  await runOp(['item', 'create', '-', '--vault', ONENV_VAULT], JSON.stringify(template))
 }
 
 function applyMetaFields(item: OpItemDetail, meta: ItemMeta): void {
