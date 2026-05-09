@@ -9,6 +9,15 @@ import type { JsonLeafType } from './types.js'
 
 const ONENV_VAULT = process.env.ONENV_VAULT ?? 'onenv'
 const ONENV_CATEGORY = process.env.ONENV_CATEGORY ?? 'API Credential'
+const TAG_PREFIX = 'onenv:'
+
+function tagFor(namespace: string): string {
+  return `${TAG_PREFIX}${namespace}`
+}
+
+function namespaceFromTag(tag: string): string | null {
+  return tag.startsWith(TAG_PREFIX) ? tag.slice(TAG_PREFIX.length) : null
+}
 
 interface ExecResult {
   code: number
@@ -105,7 +114,7 @@ function parseTitle(title: string): { namespace: string; key: string } | null {
   return { namespace: title.slice(0, sep), key: title.slice(sep + 1) }
 }
 
-async function listItems(tags?: string): Promise<OpItem[]> {
+async function listItems(namespace?: string): Promise<OpItem[]> {
   const args = [
     'item',
     'list',
@@ -116,7 +125,7 @@ async function listItems(tags?: string): Promise<OpItem[]> {
     '--format',
     'json',
   ]
-  if (tags) args.push('--tags', tags)
+  if (namespace) args.push('--tags', tagFor(namespace))
 
   const result = await execOp(args)
   if (result.code !== 0 && result.stderr.includes('no items found')) return []
@@ -129,11 +138,17 @@ async function listItems(tags?: string): Promise<OpItem[]> {
   return JSON.parse(raw) as OpItem[]
 }
 
+function ownedNamespace(item: OpItem): string | null {
+  for (const t of item.tags ?? []) {
+    const ns = namespaceFromTag(t)
+    if (ns) return ns
+  }
+  return null
+}
+
 export async function listNamespaces(): Promise<string[]> {
   const items = await listItems()
-  const namespaces = new Set(
-    items.map((i) => parseTitle(i.title)?.namespace).filter(Boolean) as string[],
-  )
+  const namespaces = new Set(items.map(ownedNamespace).filter(Boolean) as string[])
   return [...namespaces].sort()
 }
 
@@ -256,6 +271,7 @@ export async function setValueWithMeta(
     upsertField(item, 'credential', 'CONCEALED', value)
     upsertField(item, 'expires', 'DATE', expires)
     applyMetaFields(item, meta)
+    item.tags = [tagFor(namespace)]
     await withTemplateFile(JSON.stringify(item), (file) =>
       runOp(['item', 'edit', title, '--vault', ONENV_VAULT, '--template', file]),
     )
@@ -265,7 +281,7 @@ export async function setValueWithMeta(
   const template: OpItemDetail = {
     title,
     vault: { name: ONENV_VAULT },
-    tags: [namespace],
+    tags: [tagFor(namespace)],
     fields: [
       { id: 'credential', type: 'CONCEALED', value, label: 'credential' },
       { id: 'expires', type: 'DATE', value: expires, label: 'expires' },

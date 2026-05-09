@@ -32,9 +32,9 @@ function fakeChild(stdout = '', stderr = '', code = 0): FakeChild {
 }
 
 const sampleItems = [
-  { id: 'a1', title: 'aws/AWS_KEY', tags: ['aws'] },
-  { id: 'a2', title: 'aws/AWS_SECRET', tags: ['aws'] },
-  { id: 'g1', title: 'github/GH_TOKEN', tags: ['github'] },
+  { id: 'a1', title: 'aws/AWS_KEY', tags: ['onenv:aws'] },
+  { id: 'a2', title: 'aws/AWS_SECRET', tags: ['onenv:aws'] },
+  { id: 'g1', title: 'github/GH_TOKEN', tags: ['onenv:github'] },
 ]
 
 describe('onenv-client', () => {
@@ -51,7 +51,7 @@ describe('onenv-client', () => {
 
   it('listKeys filters and sorts by namespace', async () => {
     vi.mocked(cp.spawn).mockImplementationOnce((() =>
-      fakeChild(JSON.stringify(sampleItems.filter((i) => i.tags.includes('aws'))))) as never)
+      fakeChild(JSON.stringify(sampleItems.filter((i) => i.tags.includes('onenv:aws'))))) as never)
     const { listKeys } = await import('./onenv-client.js')
     expect(await listKeys('aws')).toEqual(['AWS_KEY', 'AWS_SECRET'])
   })
@@ -60,7 +60,9 @@ describe('onenv-client', () => {
     let injectCalls = 0
     vi.mocked(cp.spawn)
       .mockImplementationOnce((() =>
-        fakeChild(JSON.stringify(sampleItems.filter((i) => i.tags.includes('aws'))))) as never)
+        fakeChild(
+          JSON.stringify(sampleItems.filter((i) => i.tags.includes('onenv:aws'))),
+        )) as never)
       .mockImplementationOnce(((_cmd: string, args: readonly string[]) => {
         injectCalls += 1
         expect(args[0]).toBe('inject')
