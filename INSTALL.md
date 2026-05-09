@@ -127,8 +127,8 @@ cd onenv-manager && bun run dev
 # or with just
 just dev
 
-# Production
-onenv-manager list
+# Production (after `bun link` makes `onenv` global)
+onenv list
 ```
 
 ### Agent API

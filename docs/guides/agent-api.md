@@ -74,7 +74,12 @@ Shows desktop/Telegram prompt. Blocks until approved or timed out.
 
 ## Rate limiting
 
-Mutating endpoints: 60 req/min per-token. Exceeded → 429 + `Retry-After`.
+Two layers, both 60s windows:
+
+- **Pre-auth** (per IP, all methods): 120 req/min
+- **Post-auth** (per `x-onenv-token`, mutating only): 60 req/min
+
+Exceeded → 429 + `Retry-After`.
 
 ## Logging
 
