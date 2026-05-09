@@ -53,11 +53,12 @@ onenv keeps the same `KEY=value` ergonomics but the values live in your 1Passwor
    │   ↳ permission broker     │             ▲
    │     (desktop / telegram)  │             │
    └───────────────────────────┘             │
-                                  reads `namespace/KEY` items,
-                                  field `credential` = value
+                                  reads `namespace/KEY` items
+                                  tagged `onenv:<ns>`, field
+                                  `credential` = value
 ```
 
-State (which keys are disabled) lives at `~/.config/onenv-manager/state.json`. Everything else is in 1Password.
+Items are tagged `onenv:<namespace>` — the prefix marks ownership and is what the CLI filters on, so the vault can also hold items unrelated to onenv without conflict. State (which keys are disabled) lives at `~/.config/onenv-manager/state.json`. Everything else is in 1Password.
 
 ## Quickstart
 
@@ -81,42 +82,28 @@ onenv run -- node app.js  # injects secrets, runs your command
 ## Demo
 
 ```
+$ onenv list
+[
+  "aws",
+  "github",
+  "stripe"
+]
+
 $ onenv list aws
-aws/
-  AWS_ACCESS_KEY_ID         ●
-  AWS_SECRET_ACCESS_KEY     ●
-  AWS_REGION                ●
-  AWS_SESSION_TOKEN         ○ (disabled)
+[
+  { "key": "AWS_ACCESS_KEY_ID",     "disabled": false },
+  { "key": "AWS_REGION",            "disabled": false },
+  { "key": "AWS_SECRET_ACCESS_KEY", "disabled": false },
+  { "key": "AWS_SESSION_TOKEN",     "disabled": true  }
+]
 
 $ onenv run -- node -e 'console.log(process.env.AWS_REGION)'
 eu-west-1
-
-$ onenv prime
-<onenv version="0.3.0">
-
-<summary>
-1Password-backed secret management. CLI (onenv) for humans + scripts; HTTP API
-(onenv-api) for agents with permission brokering. ...
-</summary>
-
-<setup>
-Authenticate via service account (headless) or interactive op signin. ...
-</setup>
-
-<commands>
-set <ns> <key>
-  Create or update a secret. Reads the value from an interactive password prompt.
-  ...
-</commands>
-
-<api>
-Local HTTP server (onenv-api) for agent-driven access. ...
-</api>
-
-</onenv>
 ```
 
-`onenv prime` is a complete agent primer — every command, error code, state file, and HTTP endpoint with request/response shape. Use `--json` (or pipe) for a structured JSON object with the same content.
+Output is JSON by default (one shape per command — see `onenv prime`). For interactive browsing/editing, run `onenv tui`.
+
+`onenv prime` is a complete agent primer — every command with output shape, every error code with retryable flag, every state-file path, and every HTTP endpoint with request/response shape. XML by default, structured JSON with `--json` or when piped.
 
 ## Usage
 
@@ -126,6 +113,7 @@ onenv list                               # all namespaces / keys you have access
 onenv list aws                           # keys in one namespace
 onenv list aws --groups                  # bucket keys by reassembly group
 onenv set <ns> <KEY>                     # add/overwrite (interactive prompt)
+onenv edit <ns> <KEY>                    # update existing (interactive prompt)
 onenv unset <ns> <KEY>                   # delete
 onenv disable <ns> <KEY>                 # hide without delete
 onenv enable <ns> <KEY>                  # restore
