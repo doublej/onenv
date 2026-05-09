@@ -13,15 +13,20 @@ onenv init                  # writes .onenv.json
 
 ## 2. Bulk import
 
+The installer (`bun install.ts`) ships an interactive `.env` migrator: it scans your projects, lets you pick which `.env` files to import, and writes each key into 1Password under a chosen namespace. Re-run it any time:
+
 ```bash
-# Read existing .env, set each key under the namespace
-while IFS='=' read -r key value; do
-  [[ -z "$key" || "$key" =~ ^# ]] && continue
-  echo "$value" | onenv set my-app "$key" --stdin
-done < .env
+bun install.ts
+# answer "Yes" at the "Scan your projects for .env files" prompt
 ```
 
-(`--stdin` reads from stdin; if unsupported, run `onenv set` per key interactively.)
+For one-off keys, use the interactive prompt:
+
+```bash
+onenv set my-app MY_KEY     # paste the value at the masked prompt
+```
+
+`onenv set` does not have a `--stdin` flag — values come from the interactive prompt only, by design (avoids leaking secrets into shell history).
 
 ## 3. Verify
 

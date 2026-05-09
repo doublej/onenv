@@ -21,11 +21,7 @@ Commit — metadata, not secrets.
 
 ## Add a namespace
 
-```bash
-onenv init --add stripe
-```
-
-Or edit `.onenv.json` directly:
+Re-run `onenv init` (the multi-select picks up your previous choices and adds new ones), or edit `.onenv.json` directly:
 
 ```json
 {
@@ -54,10 +50,12 @@ Refs live in `~/.config/onenv-manager/refs.json`, not repo.
 
 ## Discoverability
 
-Once `.onenv.json` exists, agents/tooling discover keys via:
+Once `.onenv.json` exists, agents/tooling can list secrets and learn the CLI/API contract via:
 
 ```bash
-onenv prime
+onenv list           # all namespaces in your vault
+onenv list my-app    # keys in one namespace
+onenv prime          # full CLI + API spec for agents (XML; --json for machine-readable)
 ```
 
-Returns XML of namespaces + keys. Ground truth — no guessing key names.
+`prime` is the ground truth for command shapes and error codes; `list` is the ground truth for what keys exist.

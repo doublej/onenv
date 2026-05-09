@@ -2,7 +2,7 @@
 Secrets via 1Password vault `onenv`. CLI: `onenv`. HTTP API: `onenv-api`. Replaces `.env` files.
 
 <rules>
-First step in any onenv project: `onenv prime`. Returns XML of namespaces + keys — treat as ground truth. Don't guess key names.
+First step in any onenv project: `onenv prime`. Returns the full CLI + API spec (commands, error envelope, state files, HTTP endpoints) — treat as ground truth. Use `onenv list` (no args) for namespaces, `onenv list <ns>` for keys in one. Don't guess key names.
 NEVER create/read/reference `.env`. NEVER paste secret literals in code/configs/commits/messages.
 Add secret: `onenv set <namespace> <KEY>` (interactive). Never write secrets to files.
 Run cmd needing secrets: `onenv run -- <cmd>`. Not manual `export`, not shell injection.
@@ -10,14 +10,15 @@ Rotate: `onenv set` overwrites. Retire: `onenv disable <ns> <KEY>` (preserves hi
 </rules>
 
 <data_model>
-Vault `onenv` (override: `ONENV_VAULT`). Items titled `namespace/KEY`. Tag = namespace. Field `credential` = value.
-Per-project: `.onenv.json` declares namespaces used. `@refname` = namespace alias.
-State: `~/.config/onenv-manager/state.json` tracks disabled keys.
+Vault `onenv` (override: `ONENV_VAULT`). Items titled `namespace/KEY`. Tag `onenv:<namespace>` (the prefix marks ownership and is the CLI's filter). Field `credential` = value.
+Per-project: `.onenv.json` declares namespaces used. Positional namespace refs: `@1`, `@2`, ..., `@last` index into the most recent namespace listing.
+State: `~/.config/onenv-manager/state.json` tracks disabled keys (shape `{version:1, disabled:{ns:[keys]}}`).
+JSON files (GCP service accounts, OAuth tokens, kubeconfigs) can be flattened via `onenv import` and rebuilt via `onenv build-file` or `onenv run --file group:VAR`.
 </data_model>
 
 <commands>
-prime · list · set · unset · disable · enable · run -- · export · init · tui · edit
-Single-ns fetch: `onenv list <ns>`. All ns: `onenv list`.
+prime · list [--groups] · set · edit · unset · disable · enable · run [--file group:VAR] -- · export · init · import · build-file · tui
+Single-ns fetch: `onenv list <ns>`. All ns: `onenv list`. Group view: `onenv list <ns> --groups`.
 </commands>
 
 <api>

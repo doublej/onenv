@@ -17,7 +17,7 @@ After rotating in `onenv`, rotate at source (AWS, Stripe, etc.) and revoke old c
 
 | Command | Effect | Recoverable |
 |---------|--------|-------------|
-| `onenv disable <ns> <key>` | Hides from `run`, `export`, `list`. Item stays in 1Password. | Yes — `onenv enable` |
+| `onenv disable <ns> <key>` | Skipped by `run`, `export`, and the agent API's `/v1/env/export`. Item stays in 1Password. `onenv list` still shows the key, marked `disabled:true`. | Yes — `onenv enable` |
 | `onenv unset <ns> <key>` | Deletes 1Password item. | Only via 1Password deleted-items recovery (~30 days) |
 
 Default: `disable` when unsure. Use `unset` only when certain + secret revoked at source.
@@ -36,9 +36,10 @@ Format:
 
 ```json
 {
-  "disabled": [
-    { "namespace": "aws", "key": "OLD_KEY" }
-  ]
+  "version": 1,
+  "disabled": {
+    "aws": ["OLD_KEY"]
+  }
 }
 ```
 
@@ -47,10 +48,12 @@ Delete file to reset all disable flags.
 ## Bulk disable a namespace
 
 ```bash
-for k in $(onenv list aws --format json | jq -r '.[].key'); do
+for k in $(onenv list aws --json | jq -r '.[].key'); do
   onenv disable aws "$k"
 done
 ```
+
+(JSON output kicks in automatically when stdout is piped; `--json` makes it explicit.)
 
 ## Key hygiene checklist
 

@@ -23,20 +23,36 @@ Use `just` as the task runner:
 ```
 src/
 ├── cli.ts                  # CLI entry point (Commander)
-├── index.ts                # main logic / public API
+├── index.ts                # re-exports manager-service + errors + state-store helpers
 ├── commands/
-│   ├── prime.ts            # XML agent primer output
+│   ├── build-file.ts       # reassemble grouped JSON from stored leaves
+│   ├── build-file.test.ts
+│   ├── import.ts           # flatten a JSON file into onenv keys + metadata
+│   ├── import.test.ts
+│   ├── prime.ts            # agent primer dispatcher (XML/JSON)
+│   ├── prime-data.ts       # primer data shape + assembly
+│   ├── prime-data-cli.ts   # CLI section (commands, state, errors)
+│   ├── prime-data-api.ts   # API section (config, endpoints, errors)
+│   ├── prime-xml.ts        # flat XML renderer (top-level tags, prose bodies)
+│   ├── run-files.ts        # `--file group:VAR` materialize + child cleanup
 │   └── tui.ts              # interactive TUI command
 └── lib/
     ├── errors.ts           # structured CLI error types
+    ├── json-flatten.ts     # pure flatten/unflatten (empty-container sentinels)
+    ├── json-flatten.test.ts
     ├── manager-service.ts  # orchestration layer
+    ├── materialize.ts      # write rebuilt JSON to 0600 tempfile (XDG_RUNTIME_DIR)
     ├── onenv-client.ts     # 1Password CLI wrapper
+    ├── onenv-client.test.ts
+    ├── op-token.ts         # op:// ref resolver + on-disk cache
     ├── output.ts           # JSON/text output formatting
     ├── project-config.ts   # .onenv.json read/write
-    ├── ref-store.ts        # @ref shorthand storage
+    ├── ref-store.ts        # @-ref store (positional @1, @2, @last)
     ├── state-store.ts      # disabled-key state (~/.config/...)
     ├── state-store.test.ts
-    └── types.ts            # shared type definitions
+    ├── types.ts            # shared type definitions (incl. JsonLeafType)
+    ├── validation.ts       # namespace + key regex/length validation
+    └── version.ts          # runtime read of package.json version
 package.json
 tsconfig.json
 biome.json
