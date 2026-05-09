@@ -8,9 +8,7 @@
 | [1Password CLI](https://developer.1password.com/docs/cli/) | Yes | `brew install 1password-cli` |
 | [1Password desktop app](https://1password.com/downloads) | Yes | Required for biometric unlock / CLI integration |
 | [just](https://github.com/casey/just) | Optional | `brew install just` (task runner for manager) |
-| macOS | Yes* | Desktop permission broker uses AppleScript |
-
-\* The agent-api can run without macOS if you use `PERMISSION_MODE=telegram`.
+| macOS | Yes | Desktop permission dialog uses AppleScript |
 
 ## Clone & install
 
@@ -48,15 +46,12 @@ cp onenv-api/.env.example onenv-api/.env
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AGENT_API_TOKEN` | Yes | — | API authentication token |
-| `PERMISSION_MODE` | No | `desktop` | `desktop` · `telegram` · `either` · `both` |
 | `API_HOST` | No | `127.0.0.1` | Server bind address |
 | `API_PORT` | No | `4317` | Server port |
 | `PERMISSION_TIMEOUT_MS` | No | `120000` | Permission request timeout (ms) |
 | `ONENV_VAULT` | No | `onenv` | 1Password vault name |
 | `ONENV_CATEGORY` | No | `API Credential` | 1Password item category |
 | `OP_SERVICE_ACCOUNT_TOKEN` | No | — | Skips biometric prompts (see below) |
-| `TELEGRAM_BOT_TOKEN` | If telegram | — | Telegram bot token |
-| `TELEGRAM_CHAT_ID` | If telegram | — | Telegram chat ID |
 
 ### Avoiding constant 1Password approvals
 

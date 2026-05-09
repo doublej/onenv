@@ -68,7 +68,7 @@ state-store.ts        → disabled-key tracking (~/.config/onenv-manager/state.j
 ### onenv-api specifics
 
 - `src/server.ts` — Express routes, Zod validation, auth middleware (`x-onenv-token` header), pre-auth (per-IP, all methods) and post-auth (per-token, mutating only) rate limiters
-- `src/lib/permission.ts` — Desktop (AppleScript dialog) and Telegram permission brokers
+- `src/lib/permission.ts` — macOS AppleScript permission dialog
 - `src/lib/config.ts` — loads env vars with defaults; `AGENT_API_TOKEN` is required
 - All mutating endpoints require permission approval before executing
 

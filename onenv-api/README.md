@@ -6,10 +6,7 @@ Safe local API for agent access to 1Password-managed environment variables.
 
 - Binds to `127.0.0.1` by default
 - Requires API token on all endpoints except `/health`
-- Mutating operations and env export require explicit user permission
-- Supports permission brokers:
-  - Desktop dialog (macOS AppleScript)
-  - Telegram approval (`/allow <id>` / `/deny <id>`)
+- Mutating operations and env export require explicit user permission via a macOS AppleScript desktop dialog
 
 ## Requirements
 
@@ -27,15 +24,10 @@ bun install
 
 ```bash
 export AGENT_API_TOKEN='replace-me'
-export PERMISSION_MODE='desktop' # desktop | telegram | either | both
 
 # 1Password config
 export ONENV_VAULT='onenv'          # default
 export ONENV_CATEGORY='API Credential' # default
-
-# optional telegram broker
-export TELEGRAM_BOT_TOKEN='123:abc'
-export TELEGRAM_CHAT_ID='123456789'
 ```
 
 Optional:

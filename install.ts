@@ -103,25 +103,8 @@ async function configureEnv(): Promise<void> {
     validate: (v) => (v.trim().length > 0 ? undefined : 'Token is required'),
   }))
 
-  const mode = guard(await p.select({
-    message: 'How should permission requests be approved?',
-    options: [
-      { label: 'desktop', value: 'desktop', hint: 'native macOS dialog' },
-      { label: 'telegram', value: 'telegram', hint: 'Telegram bot message' },
-      { label: 'either', value: 'either', hint: 'desktop or telegram' },
-      { label: 'both', value: 'both', hint: 'require both' },
-    ],
-    initialValue: 'desktop',
-  })) as string
-
-  let telegramBot = '', telegramChat = ''
-  if (mode !== 'desktop') {
-    telegramBot = guard(await p.text({ message: 'Telegram bot token (from @BotFather)', placeholder: '123:abc' })) as string
-    telegramChat = guard(await p.text({ message: 'Telegram chat ID to send permission requests to', placeholder: '123456789' })) as string
-  }
   const lines = [
     `AGENT_API_TOKEN=${token}`,
-    `PERMISSION_MODE=${mode}`,
     '',
     '# API_HOST=127.0.0.1',
     '# API_PORT=4317',
@@ -130,9 +113,6 @@ async function configureEnv(): Promise<void> {
     `ONENV_VAULT=${ONENV_VAULT}`,
     `ONENV_CATEGORY=${ONENV_CATEGORY}`,
     '# ONENV_SERVICE_ACCOUNT_TOKEN=',
-    '',
-    telegramBot ? `TELEGRAM_BOT_TOKEN=${telegramBot}` : '# TELEGRAM_BOT_TOKEN=',
-    telegramChat ? `TELEGRAM_CHAT_ID=${telegramChat}` : '# TELEGRAM_CHAT_ID=',
     '',
   ]
   await Bun.write(envPath, lines.join('\n'))

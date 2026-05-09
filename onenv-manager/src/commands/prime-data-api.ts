@@ -3,7 +3,7 @@ import type { ApiSection } from './prime-data.js'
 export function buildApi(): ApiSection {
   return {
     description:
-      'Local HTTP server (onenv-api) for agent-driven access. Mutating endpoints block on user permission approval (desktop dialog and/or Telegram) before executing.',
+      'Local HTTP server (onenv-api) for agent-driven access. Mutating endpoints block on a macOS desktop permission dialog before executing.',
     default_url: 'http://127.0.0.1:4317',
     auth: 'Header: x-onenv-token: <AGENT_API_TOKEN>. Compared with sha256 + timing-safe equality.',
     audit_header: 'Optional x-agent-name (≤128 chars) is logged + shown in permission prompts.',
@@ -18,27 +18,10 @@ export function buildApi(): ApiSection {
       { name: 'API_HOST', required: false, default: '127.0.0.1', description: 'Bind address.' },
       { name: 'API_PORT', required: false, default: '4317', description: 'Bind port.' },
       {
-        name: 'PERMISSION_MODE',
-        required: false,
-        default: 'desktop',
-        description:
-          'desktop | telegram | either | both. Controls which prompts must approve mutations.',
-      },
-      {
         name: 'PERMISSION_TIMEOUT_MS',
         required: false,
         default: '120000',
         description: 'How long to wait for user approval before denying.',
-      },
-      {
-        name: 'TELEGRAM_BOT_TOKEN',
-        required: false,
-        description: 'Required if PERMISSION_MODE uses telegram.',
-      },
-      {
-        name: 'TELEGRAM_CHAT_ID',
-        required: false,
-        description: 'Required if PERMISSION_MODE uses telegram.',
       },
       {
         name: 'ONENV_VAULT',

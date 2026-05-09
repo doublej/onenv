@@ -23,7 +23,7 @@ Single-ns fetch: `onenv list <ns>`. All ns: `onenv list`. Group view: `onenv lis
 
 <api>
 `onenv-api` (Express, default :4317). Auth header `x-onenv-token`. Optional `x-agent-name`.
-GET (read): no approval. POST (mutate/export): require human approval via desktop AppleScript or Telegram broker.
+GET (read): no approval. POST (mutate/export): require human approval via a macOS AppleScript desktop dialog.
 Use API only when agent w/o TTY. Else CLI.
 </api>
 

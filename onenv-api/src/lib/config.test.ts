@@ -3,7 +3,6 @@ import { loadConfig } from './config.js'
 
 const ENV_KEYS = [
   'AGENT_API_TOKEN',
-  'PERMISSION_MODE',
   'PERMISSION_TIMEOUT_MS',
   'API_HOST',
   'API_PORT',
@@ -25,7 +24,6 @@ describe('loadConfig', () => {
 
     expect(config.host).toBe('127.0.0.1')
     expect(config.port).toBe(4317)
-    expect(config.permissionMode).toBe('desktop')
     expect(config.onenvVault).toBe('onenv')
     expect(config.onenvCategory).toBe('API Credential')
   })
@@ -39,13 +37,6 @@ describe('loadConfig', () => {
 
     expect(config.onenvVault).toBe('my-vault')
     expect(config.onenvCategory).toBe('Login')
-  })
-
-  it('throws for invalid permission mode', () => {
-    process.env.AGENT_API_TOKEN = 'token'
-    process.env.PERMISSION_MODE = 'invalid'
-
-    expect(() => loadConfig()).toThrow('Invalid PERMISSION_MODE: invalid')
   })
 
   it('throws for invalid numeric config', () => {

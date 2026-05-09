@@ -12,7 +12,6 @@ async function main(): Promise<void> {
 
   const server = app.listen(config.port, config.host, () => {
     console.log(`onenv-api listening on http://${config.host}:${config.port}`)
-    console.log(`permission mode: ${config.permissionMode}`)
     console.log(`1password auth: ${opAuth}`)
   })
 

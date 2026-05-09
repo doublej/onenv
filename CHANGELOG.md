@@ -41,7 +41,7 @@ Initial public release.
 ### Features
 
 - **`onenv-manager`** — CLI + interactive TUI for managing 1Password-backed secrets.
-- **`onenv-api`** — local HTTP API for agent-driven access with permission brokering (desktop AppleScript, Telegram).
+- **`onenv-api`** — local HTTP API for agent-driven access with desktop AppleScript permission prompts.
 - Service Account token support (`OP_SERVICE_ACCOUNT_TOKEN`) for headless / no-prompt operation. Accepts literal token or `op://...` reference resolved at startup.
 - Batched secret reads via `op inject` — single subprocess per `listValues` call instead of N.
 - Graceful shutdown (SIGTERM/SIGINT), JSON request logging, per-token rate limiting on `onenv-api`.

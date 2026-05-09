@@ -31,7 +31,7 @@
     {
       title: 'Agent HTTP API',
       description:
-        'onenv-api exposes the same surface over HTTP with permission brokering — every mutation gates behind a desktop dialog or Telegram approval before executing.',
+        'onenv-api exposes the same surface over HTTP — every mutation gates behind a macOS AppleScript desktop dialog before executing.',
     },
     {
       title: 'Agent primer',

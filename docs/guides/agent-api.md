@@ -44,12 +44,7 @@ x-agent-name: my-agent
 
 ## Permission flow
 
-POST endpoints block until human approves via:
-
-- **Desktop** — AppleScript dialog on macOS
-- **Telegram** — bot message; reply `/allow <id>` or `/deny <id>`
-
-Configure: `PERMISSION_MODE` (`desktop` · `telegram` · `either` · `both`). Timeout: `PERMISSION_TIMEOUT_MS` (default 120s).
+POST endpoints block until the user approves via a macOS AppleScript desktop dialog. Timeout: `PERMISSION_TIMEOUT_MS` (default 120s).
 
 ## Read example
 
@@ -70,7 +65,7 @@ curl -s -X POST \
   http://127.0.0.1:4317/v1/vars/set
 ```
 
-Shows desktop/Telegram prompt. Blocks until approved or timed out.
+Shows desktop prompt. Blocks until approved or timed out.
 
 ## Rate limiting
 

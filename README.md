@@ -18,7 +18,7 @@ Secrets live in a 1Password vault as `namespace/KEY` items. No plaintext on disk
 - **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
 - **Disable without deleting** — `onenv disable <key>` keeps the secret in 1Password but excludes it from `run`/`export`; `enable` restores it
 - **Interactive TUI** — `@clack/prompts`-based menu for browsing/editing without typing commands
-- **Agent HTTP API** — `onenv-api` exposes the same surface over HTTP with permission brokering (desktop AppleScript dialog or Telegram approval) on every mutation
+- **Agent HTTP API** — `onenv-api` exposes the same surface over HTTP, gating every mutation behind a macOS AppleScript desktop dialog
 - **Agent primer** — `onenv prime` emits a complete spec (commands, errors, state files, HTTP endpoints) as XML or JSON for dropping into agent context
 - **`@`-refs** — positional shorthand against the last namespace list (`@1`, `@2`, `@last`) for fast repeat work
 - **Service-account ready** — `OP_SERVICE_ACCOUNT_TOKEN` accepts a literal `ops_eyJ...` token *or* an `op://...` reference; resolved once and cached at `~/.config/onenv-manager/op-token` (mode 0600), self-heals on auth failure
@@ -35,7 +35,7 @@ onenv keeps the same `KEY=value` ergonomics but the values live in your 1Passwor
 - **Nothing on disk** — `onenv run` injects secrets at process start; they exist in env memory only
 - **Real auth** — biometric unlock or a scoped service account, not a chmod 600 hope
 - **Audit + rotate** — 1Password tracks every read; rotate by overwriting the item
-- **Agent-safe** — the HTTP API gates every mutation behind a human approval (desktop dialog or Telegram)
+- **Agent-safe** — the HTTP API gates every mutation behind a macOS AppleScript desktop dialog
 - **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
 
 ## How it works
@@ -50,8 +50,8 @@ onenv keeps the same `KEY=value` ergonomics but the values live in your 1Passwor
    ┌─ onenv-api (HTTP, :4317) ─┐  │     │ (biometric / │     │     vault     │
    │                           │  │     │  service-acct│     │   "onenv"     │
    │   POST /v1/vars/set       │──┘     └──────────────┘     └───────────────┘
-   │   ↳ permission broker     │             ▲
-   │     (desktop / telegram)  │             │
+   │   ↳ desktop dialog        │             ▲
+   │     (AppleScript)         │             │
    └───────────────────────────┘             │
                                   reads `namespace/KEY` items
                                   tagged `onenv:<ns>`, field
@@ -141,7 +141,7 @@ Per-field rotation works the same as flat secrets. Empty containers and types (n
 
 ## Agent API
 
-For headless / agent use, run `onenv-api` and call it over HTTP. Mutations require human approval (desktop dialog or Telegram).
+For headless / agent use, run `onenv-api` and call it over HTTP. Mutations require human approval via a macOS AppleScript desktop dialog.
 
 ```bash
 curl -H "x-onenv-token: $AGENT_API_TOKEN" \
