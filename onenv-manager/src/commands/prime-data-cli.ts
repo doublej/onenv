@@ -44,9 +44,9 @@ export function buildCommands(): CommandSpec[] {
       output: 'TTY: green confirmation. JSON: {ok:true,message}.',
     },
     {
-      name: 'run [--file <group:VAR>...] -- <cmd...>',
+      name: 'run [--file <group:VAR>...] [--file-rw <group:VAR>...] -- <cmd...>',
       description:
-        'Read .onenv.json, fetch enabled secrets across all configured namespaces, exec <cmd> with secrets injected as env vars. Inherits stdio. --file (repeatable) materializes the JSON for a group into a 0600 tempfile under XDG_RUNTIME_DIR (fallback: os tmpdir), exposes its absolute path as the named env var, and removes the tempfile on child exit / SIGINT / SIGTERM. The group name must be unique across the project namespaces or the command errors.',
+        'Read .onenv.json, fetch enabled secrets across all configured namespaces, exec <cmd> with secrets injected as env vars. Inherits stdio. --file (repeatable) materializes the JSON for a group into a 0600 tempfile under XDG_RUNTIME_DIR (fallback: os tmpdir), exposes its absolute path as the named env var, and removes the tempfile on child exit / SIGINT / SIGTERM. --file-rw behaves identically but also sha256-hashes the materialized file before exec and re-imports it into the same namespace+group on clean child close if the hash changed; writeback is skipped on signal exit, on read failure, or if the hash matches. The group name must be unique across the project namespaces or the command errors.',
       output: 'Mirrors the child exit code. No onenv output written.',
     },
     {

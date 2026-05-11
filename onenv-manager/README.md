@@ -8,7 +8,7 @@ Terminal UI + CLI wrapper for [1Password CLI](https://developer.1password.com/do
 - **Disable without deleting** — `disable` marks a key inactive in local state without touching the 1Password item; `enable` restores it
 - **Per-project namespaces** — `onenv init` writes `.onenv.json` declaring which namespaces a project pulls
 - **`onenv run -- <cmd>`** — fetches enabled secrets across the project namespaces, injects as env vars, execs the command
-- **JSON file flow** — `onenv import` flattens a JSON file (GCP service accounts, OAuth tokens, kubeconfigs) into per-leaf onenv keys with reassembly metadata; `onenv build-file` rebuilds the original shape; `onenv run --file group:VAR` materializes the file to a `0600` tempfile and exposes its path
+- **JSON file flow** — `onenv import` flattens a JSON file (GCP service accounts, OAuth tokens, kubeconfigs) into per-leaf onenv keys with reassembly metadata; `onenv build-file` rebuilds the original shape; `onenv run --file group:VAR` materializes the file to a `0600` tempfile and exposes its path; `onenv run --file-rw group:VAR` writes the file back to onenv if the child mutated it (OAuth refresh, rotation)
 - **Grouped listing** — `onenv list <ns> --groups` buckets keys by their reassembly group
 - **Interactive TUI** — `@clack/prompts`-based menu for browsing/editing without typing commands
 - **`@`-refs** — positional shorthand against the last namespace list (`@1`, `@2`, `@last`) for fast repeat work
@@ -55,6 +55,7 @@ onenv disable <namespace> <key...>       # mark inactive without deleting
 onenv enable <namespace> <key...>        # restore disabled keys
 onenv init                               # write .onenv.json for current project
 onenv run [--file group:VAR] -- <cmd>    # exec cmd with project secrets (and optional JSON file path) injected
+onenv run --file-rw group:VAR -- <cmd>   # same, but write back to onenv on clean exit if child mutated it
 onenv import <ns> <file.json>            # flatten a JSON file into onenv keys (--group, --keys, --prefix, --dry-run)
 onenv build-file <ns> --group <name>     # reassemble the JSON file from stored leaves (--out, --indent)
 onenv export <ns[,ns2,...]>              # print enabled values as JSON
