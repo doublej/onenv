@@ -54,8 +54,8 @@ onenv unset <namespace> <key...>         # delete one or more keys
 onenv disable <namespace> <key...>       # mark inactive without deleting
 onenv enable <namespace> <key...>        # restore disabled keys
 onenv init                               # write .onenv.json for current project
-onenv run [--file group:VAR] -- <cmd>    # exec cmd with project secrets (and optional JSON file path) injected
-onenv run --file-rw group:VAR -- <cmd>   # same, but write back to onenv on clean exit if child mutated it
+onenv run [--file [ns/]group:VAR] -- <cmd>    # exec cmd with project secrets (and optional JSON file path) injected
+onenv run --file-rw [ns/]group:VAR -- <cmd>   # same, but write back to onenv on clean exit if child mutated it
 onenv import <ns> <file.json>            # flatten a JSON file into onenv keys (--group, --keys, --prefix, --dry-run)
 onenv build-file <ns> --group <name>     # reassemble the JSON file from stored leaves (--out, --indent)
 onenv export <ns[,ns2,...]>              # print enabled values as JSON

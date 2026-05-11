@@ -278,13 +278,13 @@ program
   .argument('[-- command...]', 'Command to run with exported vars as env')
   .option(
     '-f, --file <spec>',
-    'Materialize a grouped JSON file and expose its path: group:ENV_VAR',
+    'Materialize a grouped JSON and expose its path: [namespace/]group:ENV_VAR',
     collectOption,
     [] as string[],
   )
   .option(
     '-w, --file-rw <spec>',
-    'Same as --file, but write changes back to onenv on exit: group:ENV_VAR',
+    'Same as --file, but write back to onenv on clean exit: [namespace/]group:ENV_VAR',
     collectOption,
     [] as string[],
   )

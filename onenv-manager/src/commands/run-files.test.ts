@@ -106,3 +106,34 @@ describe('runWritebacks', () => {
     expect(importJsonFile).not.toHaveBeenCalled()
   })
 })
+
+describe('parseFileSpec', () => {
+  it('parses bare group:VAR', async () => {
+    const { parseFileSpec } = await import('./run-files.js')
+    expect(parseFileSpec('token:GMAIL_TOKEN')).toEqual({
+      group: 'token',
+      varName: 'GMAIL_TOKEN',
+    })
+  })
+
+  it('parses namespace/group:VAR', async () => {
+    const { parseFileSpec } = await import('./run-files.js')
+    expect(parseFileSpec('gws-poolsuite/token:GMAIL_TOKEN')).toEqual({
+      namespace: 'gws-poolsuite',
+      group: 'token',
+      varName: 'GMAIL_TOKEN',
+    })
+  })
+
+  it('rejects empty group or var', async () => {
+    const { parseFileSpec } = await import('./run-files.js')
+    expect(() => parseFileSpec(':VAR')).toThrow(/Invalid --file value/)
+    expect(() => parseFileSpec('group:')).toThrow(/Invalid --file value/)
+  })
+
+  it('treats trailing or leading slash as bare group, not explicit namespace', async () => {
+    const { parseFileSpec } = await import('./run-files.js')
+    expect(parseFileSpec('/group:VAR')).toEqual({ group: '/group', varName: 'VAR' })
+    expect(parseFileSpec('ns/:VAR')).toEqual({ group: 'ns/', varName: 'VAR' })
+  })
+})

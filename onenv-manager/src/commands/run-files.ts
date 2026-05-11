@@ -43,19 +43,57 @@ async function prepareInjection(
   fileEnv: Record<string, string>,
 ): Promise<FileInjection> {
   const parsed = parseFileSpec(spec)
-  const namespace = await resolveGroupNamespace(parsed.group, namespaces)
+  const namespace = parsed.namespace
+    ? await assertExplicitNamespace(parsed.namespace, parsed.group, namespaces)
+    : await resolveGroupNamespace(parsed.group, namespaces)
   const { path, cleanup } = await materializeFile(namespace, parsed.group)
   fileEnv[parsed.varName] = path
   const initialHash = writeback ? hashFile(path) : ''
   return { namespace, group: parsed.group, path, cleanup, writeback, initialHash }
 }
 
-function parseFileSpec(spec: string): { group: string; varName: string } {
+export interface ParsedFileSpec {
+  namespace?: string
+  group: string
+  varName: string
+}
+
+export function parseFileSpec(spec: string): ParsedFileSpec {
   const idx = spec.indexOf(':')
   if (idx <= 0 || idx === spec.length - 1) {
-    throw validationError(`Invalid --file value: ${spec}`, 'Expected format: group:ENV_VAR')
+    throw validationError(
+      `Invalid --file value: ${spec}`,
+      'Expected format: group:ENV_VAR or namespace/group:ENV_VAR',
+    )
   }
-  return { group: spec.slice(0, idx), varName: spec.slice(idx + 1) }
+  const left = spec.slice(0, idx)
+  const varName = spec.slice(idx + 1)
+  const slashIdx = left.indexOf('/')
+  if (slashIdx <= 0 || slashIdx === left.length - 1) {
+    return { group: left, varName }
+  }
+  return { namespace: left.slice(0, slashIdx), group: left.slice(slashIdx + 1), varName }
+}
+
+async function assertExplicitNamespace(
+  ns: string,
+  group: string,
+  namespaces: string[],
+): Promise<string> {
+  if (!namespaces.includes(ns)) {
+    throw validationError(
+      `Namespace "${ns}" not in project namespaces`,
+      `Edit .onenv.json or use one of: ${namespaces.join(', ')}`,
+    )
+  }
+  const groups = await listGroupsForNamespace(ns)
+  if (!groups.includes(group)) {
+    throw validationError(
+      `Group "${group}" not found in namespace "${ns}"`,
+      `Run "onenv list ${ns} --groups" to see available groups`,
+    )
+  }
+  return ns
 }
 
 async function resolveGroupNamespace(group: string, namespaces: string[]): Promise<string> {
@@ -73,7 +111,7 @@ async function resolveGroupNamespace(group: string, namespaces: string[]): Promi
   if (matches.length > 1) {
     throw validationError(
       `Group "${group}" exists in multiple namespaces: ${matches.join(', ')}`,
-      'Rename the group in one namespace to disambiguate',
+      `Disambiguate with namespace/${group}:ENV_VAR (e.g. ${matches[0]}/${group}:VAR)`,
     )
   }
   return matches[0]
