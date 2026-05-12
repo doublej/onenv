@@ -289,7 +289,7 @@ program
     [] as string[],
   )
   .allowExcessArguments(true)
-  .action(async (options: { file: string[]; fileRw: string[] }) => {
+  .action(async (_commandArgs: string[], options: { file: string[]; fileRw: string[] }) => {
     const config = await readProjectConfig()
     const values = await exportEnabledValues(config.namespaces)
     const cmd = argsAfterDoubleDash()
