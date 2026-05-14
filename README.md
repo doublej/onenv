@@ -13,7 +13,7 @@ Secrets live in a 1Password vault as `namespace/KEY` items. No plaintext on disk
 
 - **`.env` replacement** — `KEY=value` ergonomics, but values live in a 1Password vault; nothing on disk
 - **`onenv run -- <cmd>`** — fetches per-project secrets, injects as env vars, execs your command
-- **JSON file support** — `onenv import` flattens a JSON file (GCP service accounts, OAuth tokens, kubeconfigs) into per-leaf onenv keys; `onenv run --file group:VAR` materializes the rebuilt JSON to a `0600` tempfile and exposes its path. Per-field rotation, no plaintext JSON on disk.
+- **JSON file support** — `onenv import` flattens a JSON file (GCP service accounts, OAuth tokens, kubeconfigs) into per-leaf onenv keys; `onenv run --file group:VAR` materializes the rebuilt JSON to a `0600` tempfile and exposes its path; `onenv run --file-rw group:VAR` does the same but writes the file back to onenv if the child mutated it (OAuth refresh, rotation). Per-field rotation, no plaintext JSON on disk.
 - **`onenv build-file`** — reassemble the original JSON shape from stored leaves (with type preservation: numbers stay numbers, empty containers round-trip)
 - **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
 - **Disable without deleting** — `onenv disable <key>` keeps the secret in 1Password but excludes it from `run`/`export`; `enable` restores it
@@ -118,7 +118,8 @@ onenv unset <ns> <KEY>                   # delete
 onenv disable <ns> <KEY>                 # hide without delete
 onenv enable <ns> <KEY>                  # restore
 onenv run -- <cmd>                       # run command with project secrets injected
-onenv run --file group:VAR -- <cmd>      # also materialize a JSON file, expose its path as VAR
+onenv run --file [ns/]group:VAR -- <cmd>      # also materialize a JSON file, expose its path as VAR
+onenv run --file-rw [ns/]group:VAR -- <cmd>   # same, but write back to onenv if child mutated it
 onenv import <ns> <file.json>            # flatten a JSON file into onenv keys
 onenv build-file <ns> --group <name>     # reassemble the JSON file from stored leaves
 onenv export <ns[,ns2]>                  # print enabled values as JSON
@@ -138,6 +139,17 @@ onenv run --file sa:GOOGLE_APPLICATION_CREDENTIALS -- python app.py
 ```
 
 Per-field rotation works the same as flat secrets. Empty containers and types (numbers, booleans, nulls) round-trip exactly.
+
+For files the child program mutates (OAuth tokens that self-refresh, rotating credentials), use `--file-rw` instead of `--file`. onenv hashes the materialized file before the child runs and re-imports it on clean exit only if the hash changed. Re-import preserves the same group; new leaves create new keys, removed leaves leave stale keys in place (run `onenv unset` to prune). Writeback is skipped on SIGINT/SIGTERM and on any read error, so a crashed child cannot poison the vault.
+
+When the same group name exists in multiple project namespaces (e.g. one `token` group per OAuth account), bare `group:VAR` is ambiguous and the command errors. Disambiguate with `namespace/group:VAR`:
+
+```bash
+onenv run \
+  --file-rw gws-poolsuite/token:GMAIL_TOKEN_POOLSUITE \
+  --file-rw gws-personal/token:GMAIL_TOKEN_PERSONAL \
+  -- python3 mail_sync.py
+```
 
 ## Agent API
 

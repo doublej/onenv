@@ -278,24 +278,34 @@ program
   .argument('[-- command...]', 'Command to run with exported vars as env')
   .option(
     '-f, --file <spec>',
-    'Materialize a grouped JSON file and expose its path: group:ENV_VAR',
+    'Materialize a grouped JSON and expose its path: [namespace/]group:ENV_VAR',
+    collectOption,
+    [] as string[],
+  )
+  .option(
+    '-w, --file-rw <spec>',
+    'Same as --file, but write back to onenv on clean exit: [namespace/]group:ENV_VAR',
     collectOption,
     [] as string[],
   )
   .allowExcessArguments(true)
-  .action(async (options: { file: string[] }) => {
+  .action(async (_commandArgs: string[], options: { file: string[]; fileRw: string[] }) => {
     const config = await readProjectConfig()
     const values = await exportEnabledValues(config.namespaces)
     const cmd = argsAfterDoubleDash()
     if (!cmd || cmd.length === 0) {
       throw validationError('No command provided after --', 'onenv run -- node app.js')
     }
-    const { fileEnv, cleanups } = await prepareFileInjections(options.file ?? [], config.namespaces)
+    const { fileEnv, injections } = await prepareFileInjections(
+      options.file ?? [],
+      options.fileRw ?? [],
+      config.namespaces,
+    )
     const child = spawn(cmd[0], cmd.slice(1), {
       stdio: 'inherit',
       env: { ...process.env, ...values, ...fileEnv },
     })
-    bindChildCleanup(child, cleanups)
+    bindChildCleanup(child, injections)
   })
 
 function collectOption(value: string, prev: string[]): string[] {
