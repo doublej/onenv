@@ -1,6 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 — 2026-05-15
+
+### Changed
+
+- **`onenv prime` emits Markdown by default when piped.** Previously piped consumers received JSON; now they receive a Markdown document with the same content. `--json` still forces JSON; TTY default remains XML. Agents that parsed the JSON envelope must opt in with `--json`.
+- **XML primer restructured to flt-style.** Root element renamed from `<onenv>` to `<onenv-agent-guide>`; sections collapsed into `<role>`, `<rules priority="critical">` (TOKEN / STORAGE / NAMING / REFS / STATE FILES), `<commands>` (categorized CORE / RUN-EXPORT / GROUPED-FILES / OTHER), `<workflow strict="true">`, `<errors>`, `<output>`, `<api>`. Breaking for consumers parsing the previous tag layout.
+
+### Added
+
+- **`onenv prime` Markdown renderer (`prime-md.ts`).** Produces `# / ## / ###`-structured output mirroring the XML layout, suitable for piping into agents that prefer plain text.
+- **ASCII key logo header.** Both XML and Markdown outputs are now prefixed with a small key-in-profile banner labelled `1Password / onenv primer`; JSON output is unchanged.
+
+## 0.4.0 — 2026-05-13
 
 ### Changed
 
