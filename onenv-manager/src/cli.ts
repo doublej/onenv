@@ -20,7 +20,7 @@ import {
 import { validationError } from './lib/errors.js'
 import { getNamespaceVarsWithMeta } from './lib/manager-service.js'
 import { ensureServiceAccountToken } from './lib/op-token.js'
-import { handleError, isJsonMode, output, setJsonMode, success } from './lib/output.js'
+import { handleError, output, setJsonMode, success } from './lib/output.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
 import { resolveRef, storeRefs } from './lib/ref-store.js'
 import type { NamespaceVar } from './lib/types.js'
@@ -67,9 +67,11 @@ function argsAfterDoubleDash(): string[] | null {
 
 program
   .command('prime')
-  .description('Print agent primer (XML by default; JSON when --json or stdout is not a TTY)')
+  .description('Print agent primer (XML on TTY, Markdown when piped, JSON with --json)')
   .action(() => {
-    printPrime(isJsonMode())
+    const explicitJson = Boolean(program.opts().json)
+    const format = explicitJson ? 'json' : process.stdout.isTTY ? 'xml' : 'md'
+    printPrime(format)
   })
 
 program

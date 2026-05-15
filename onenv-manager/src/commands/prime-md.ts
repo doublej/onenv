@@ -11,32 +11,23 @@ import type {
   WorkflowSection,
 } from './prime-data.js'
 
-export function renderXml(data: PrimerData): string {
+export function renderMarkdown(data: PrimerData): string {
   const sections = [
-    tag('role', data.summary),
-    tag('rules', renderRules(data), { priority: 'critical' }),
-    tag('commands', renderCommands(data.commands)),
-    tag('workflow', renderWorkflow(data.workflow), { strict: 'true' }),
-    tag('errors', renderErrors(data.errors)),
-    tag('output', renderOutputContract(data.output_contract)),
-    tag('api', renderApi(data.api)),
+    `# onenv ${data.version}`,
+    `## Role\n\n${data.summary}`,
+    renderRules(data),
+    renderCommands(data.commands),
+    renderWorkflow(data.workflow),
+    renderErrors(data.errors),
+    renderOutputContract(data.output_contract),
+    renderApi(data.api),
   ]
-  return `<onenv-agent-guide version="${escapeAttr(data.version)}">\n\n${sections.join('\n\n')}\n\n</onenv-agent-guide>`
-}
-
-function tag(name: string, body: string, attrs: Record<string, string> = {}): string {
-  const attrStr = Object.entries(attrs)
-    .map(([k, v]) => ` ${k}="${escapeAttr(v)}"`)
-    .join('')
-  return `<${name}${attrStr}>\n${body.trim()}\n</${name}>`
-}
-
-function escapeAttr(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;')
+  return `${sections.join('\n\n')}\n`
 }
 
 function renderRules(data: PrimerData): string {
   return [
+    '## Rules',
     renderToken(data.setup),
     renderStorage(data.setup),
     renderNaming(data.naming),
@@ -46,12 +37,12 @@ function renderRules(data: PrimerData): string {
 }
 
 function renderToken(s: SetupSection): string {
-  return `TOKEN:\n${s.service_account_token}`
+  return `### Token\n\n${s.service_account_token}`
 }
 
 function renderStorage(s: SetupSection): string {
   return [
-    'STORAGE:',
+    '### Storage',
     `- Vault: ${s.vault}`,
     `- Category: ${s.category}`,
     `- Item layout: ${s.item_layout}`,
@@ -60,41 +51,42 @@ function renderStorage(s: SetupSection): string {
 
 function renderNaming(n: NamingSection): string {
   return [
-    'NAMING:',
-    `- Namespace: ${n.namespace_regex} (max ${n.namespace_max_length} chars)`,
-    `- Key: ${n.key_regex} (max ${n.key_max_length} chars)`,
+    '### Naming',
+    `- Namespace: \`${n.namespace_regex}\` (max ${n.namespace_max_length} chars)`,
+    `- Key: \`${n.key_regex}\` (max ${n.key_max_length} chars)`,
     `- ${n.injection_warning}`,
   ].join('\n')
 }
 
 function renderRefs(r: RefsSection): string {
-  const lines = ['REFS:', `- ${r.description}`, ...r.syntax.map((s) => `- ${s}`)]
+  const lines = ['### Refs', `- ${r.description}`, ...r.syntax.map((s) => `- ${s}`)]
   lines.push(`- State file: ${r.state_file}`)
   return lines.join('\n')
 }
 
 function renderStateFiles(entries: StateEntry[]): string {
-  const lines = entries.map((e) => `- ${e.path} — ${e.description}`)
-  return ['STATE FILES:', ...lines].join('\n')
+  const lines = entries.map((e) => `- \`${e.path}\` — ${e.description}`)
+  return ['### State files', ...lines].join('\n')
 }
 
 function renderCommands(commands: CommandSpec[]): string {
   const groups = groupCommands(commands)
-  return groups
+  const bodies = groups
     .filter((g) => g.entries.length > 0)
-    .map((g) => `${g.label}:\n${g.entries.map(formatCommand).join('\n\n')}`)
+    .map((g) => `### ${g.label}\n\n${g.entries.map(formatCommand).join('\n\n')}`)
     .join('\n\n')
+  return `## Commands\n\n${bodies}`
 }
 
 function groupCommands(commands: CommandSpec[]): { label: string; entries: CommandSpec[] }[] {
   return [
-    { label: 'CORE', entries: commands.filter((c) => matchCategory(c.name, CORE_PREFIXES)) },
-    { label: 'RUN / EXPORT', entries: commands.filter((c) => matchCategory(c.name, RUN_PREFIXES)) },
+    { label: 'Core', entries: commands.filter((c) => matchCategory(c.name, CORE_PREFIXES)) },
+    { label: 'Run / Export', entries: commands.filter((c) => matchCategory(c.name, RUN_PREFIXES)) },
     {
-      label: 'GROUPED FILES',
+      label: 'Grouped files',
       entries: commands.filter((c) => matchCategory(c.name, FILE_PREFIXES)),
     },
-    { label: 'OTHER', entries: commands.filter((c) => isOther(c.name)) },
+    { label: 'Other', entries: commands.filter((c) => isOther(c.name)) },
   ]
 }
 
@@ -112,29 +104,33 @@ function isOther(name: string): boolean {
 }
 
 function formatCommand(c: CommandSpec): string {
-  return `  onenv ${c.name}\n    ${c.description}\n    Output: ${c.output}`
+  return `- \`onenv ${c.name}\` — ${c.description}\n  - Output: ${c.output}`
 }
 
 function renderWorkflow(w: WorkflowSection): string {
   const project = w.project_setup.map((s, i) => `${i + 1}. ${s}`).join('\n')
   const adhoc = w.ad_hoc.map((s) => `- ${s}`).join('\n')
-  return ['PROJECT SETUP:', project, '', 'AD-HOC:', adhoc].join('\n')
+  return ['## Workflow', '### Project setup', project, '### Ad-hoc', adhoc].join('\n\n')
 }
 
 function renderErrors(errors: ErrorsSection): string {
   const codes = errors.codes
     .map(
       (c) =>
-        `- ${c.code} (${c.category}, ${c.retryable ? 'retryable' : 'not retryable'}) — ${c.meaning}`,
+        `- \`${c.code}\` (${c.category}, ${c.retryable ? 'retryable' : 'not retryable'}) — ${c.meaning}`,
     )
     .join('\n')
-  return [`Envelope: ${errors.envelope}. Exit code: ${errors.exit_code}`, '', 'CODES:', codes].join(
-    '\n',
-  )
+  return [
+    '## Errors',
+    `Envelope: \`${errors.envelope}\`. Exit code: ${errors.exit_code}`,
+    '### Codes',
+    codes,
+  ].join('\n\n')
 }
 
 function renderOutputContract(c: OutputContract): string {
   return [
+    '## Output',
     `- ${c.description}`,
     `- Raw data: ${c.raw_data}`,
     `- Envelope: ${c.envelope}`,
@@ -145,22 +141,19 @@ function renderOutputContract(c: OutputContract): string {
 
 function renderApi(api: ApiSection): string {
   return [
+    '## API',
     api.description,
-    '',
     `URL: ${api.default_url} (default)`,
     `Auth: ${api.auth}`,
     `Audit: ${api.audit_header}`,
     `Rate limit: ${api.rate_limit}`,
-    '',
-    'CONFIG ENV:',
+    '### Config env',
     renderApiEnv(api),
-    '',
-    'ENDPOINTS:',
+    '### Endpoints',
     renderApiEndpoints(api),
-    '',
-    'ERRORS:',
+    '### Errors',
     renderApiErrors(api),
-  ].join('\n')
+  ].join('\n\n')
 }
 
 function renderApiEnv(api: ApiSection): string {
@@ -168,7 +161,7 @@ function renderApiEnv(api: ApiSection): string {
     .map((e) => {
       const flags = [e.required ? 'required' : 'optional']
       if (e.default !== undefined) flags.push(`default ${e.default}`)
-      return `- ${e.name} (${flags.join(', ')}) — ${e.description}`
+      return `- \`${e.name}\` (${flags.join(', ')}) — ${e.description}`
     })
     .join('\n')
 }
@@ -176,15 +169,15 @@ function renderApiEnv(api: ApiSection): string {
 function renderApiEndpoints(api: ApiSection): string {
   return api.endpoints
     .map((e) => {
-      const parts = [`${e.method.padEnd(4)} ${e.path}`, `[${e.permission}]`]
+      const parts = [`\`${e.method} ${e.path}\``, `[${e.permission}]`]
       if (e.body) parts.push(`body: ${e.body}`)
       parts.push(`→ ${e.response}`)
-      const line = `  ${parts.join('  ')}`
-      return e.notes ? `${line}\n    notes: ${e.notes}` : line
+      const line = `- ${parts.join('  ')}`
+      return e.notes ? `${line}\n  - notes: ${e.notes}` : line
     })
     .join('\n')
 }
 
 function renderApiErrors(api: ApiSection): string {
-  return api.error_responses.map((e) => `- ${e.status} ${e.body} — ${e.when}`).join('\n')
+  return api.error_responses.map((e) => `- ${e.status} \`${e.body}\` — ${e.when}`).join('\n')
 }
