@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0] — 2026-05-22
+
+### Added
+
+- `ONENV_CONFIRM_MUTATIONS=1` — opt-in macOS dialog that gates every mutating CLI path (`set`, `edit`, `unset`, `import`) with an Allow/Deny prompt naming the action, namespace, and key(s). Deny → `PERMISSION_DENIED`. Non-macOS errors with `PERMISSION_UNSUPPORTED` so the guard fails loud. Optional `PERMISSION_TIMEOUT_MS` (default 120000) caps the dialog wait.
+
+### Removed (breaking)
+
+- The `onenv-api` package is gone. It served HTTP at port 47891 with `x-onenv-token` auth and brokered mutations through an AppleScript dialog. A consumer audit turned up no callers — the agent surface is the CLI. The permission-brokering feature it uniquely offered now lives on the CLI as `ONENV_CONFIRM_MUTATIONS=1` (above). If you were running the api, switch your callers to invoking `onenv` directly with that env set.
+- `prime-data-api.ts` and the `<api>` section of the primer are gone; replaced by `<permission>`.
+
+### Changed
+
+- Single-package repo: install.ts no longer prompts for `AGENT_API_TOKEN` or bootstraps the api.
+
 ## [0.6.0] — 2026-05-21
 
 ### Added
