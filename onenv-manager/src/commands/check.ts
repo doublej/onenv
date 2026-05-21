@@ -58,4 +58,13 @@ export function registerCheckCommand(program: Command): void {
     .command('check')
     .description('Compare process.env against onenv for the project namespaces (no values printed)')
     .action(checkAction)
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ onenv check
+      Show match/differ/missing per key from .onenv.json
+  $ onenv check && echo "shell is in sync" || echo "drift detected"
+      Use the exit code in scripts (0 = all match, 1 = drift)`,
+    )
 }

@@ -64,4 +64,15 @@ export function registerUnsetCommand(program: Command): void {
     .argument('<keys...>', 'Variable names to remove')
     .option('-y, --yes', 'Skip confirmation (required in non-interactive contexts)')
     .action(unsetAction)
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ onenv unset aws AWS_OLD_KEY
+      Prompt to confirm before deleting
+  $ onenv unset aws AWS_OLD_KEY --yes
+      Scripted delete, no prompt
+  $ onenv unset aws AWS_OLD_KEY AWS_OLDER_KEY --yes
+      Delete multiple keys in one call`,
+    )
 }

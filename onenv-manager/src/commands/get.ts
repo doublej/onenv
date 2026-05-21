@@ -75,4 +75,15 @@ export function registerGetCommand(program: Command): void {
     .option('--fingerprint', 'Print sha256:<hex> instead of the value')
     .option('--meta', 'Include group/path/type metadata')
     .action(getAction)
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ onenv get aws AWS_SECRET_ACCESS_KEY
+      Print the raw value to stdout
+  $ onenv get aws AWS_SECRET_ACCESS_KEY --fingerprint
+      Print sha256 only — safe to share when comparing
+  $ onenv get aws AWS_SECRET_ACCESS_KEY --meta --fingerprint
+      Fingerprint plus group/path/type metadata`,
+    )
 }

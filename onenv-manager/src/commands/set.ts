@@ -42,4 +42,15 @@ export function registerSetCommand(program: Command): void {
     .argument('<key>', 'Variable name')
     .option('--value-stdin', 'Read value from stdin (strips one trailing newline)')
     .action(setAction)
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ onenv set aws AWS_SECRET_ACCESS_KEY
+      Interactive prompt for the value (TTY only)
+  $ echo -n "$AWS_SECRET" | onenv set aws AWS_SECRET_ACCESS_KEY --value-stdin
+      Read the value from stdin, no shell history
+  $ op read "op://Private/aws/credential" | onenv set aws AWS_SECRET_ACCESS_KEY --value-stdin
+      Pipe directly from a 1Password reference`,
+    )
 }

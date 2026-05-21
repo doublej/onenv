@@ -6,7 +6,7 @@ import { buildFile } from './commands/build-file.js'
 import { registerCheckCommand } from './commands/check.js'
 import { registerEditCommand } from './commands/edit.js'
 import { registerGetCommand } from './commands/get.js'
-import { importJsonFile } from './commands/import.js'
+import { registerImportCommand } from './commands/import.js'
 import { printPrime } from './commands/prime.js'
 import { bindChildCleanup, prepareFileInjections } from './commands/run-files.js'
 import { registerSetCommand } from './commands/set.js'
@@ -95,6 +95,19 @@ program
       output(await getNamespaceVars(namespace))
     },
   )
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ onenv list
+      List every namespace onenv knows about
+  $ onenv list aws
+      List variables in the aws namespace
+  $ onenv list aws --meta
+      Include group/path/type plus sha256 fingerprints
+  $ onenv list aws --groups
+      Bucket vars by their group field`,
+  )
 
 function groupVars(vars: NamespaceVar[]): Record<string, NamespaceVar[]> {
   const buckets: Record<string, NamespaceVar[]> = {}
@@ -130,6 +143,15 @@ program
       keys: safeKeys,
     })
   })
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ onenv disable aws AWS_OLD_KEY
+      Stop exporting AWS_OLD_KEY without deleting it
+  $ onenv disable aws AWS_OLD_KEY AWS_OLDER_KEY
+      Disable multiple keys at once`,
+  )
 
 program
   .command('enable')
@@ -146,62 +168,17 @@ program
     await storeRefs([namespace])
     success(`Enabled ${safeKeys.length} variable(s) in ${namespace}`, { namespace, keys: safeKeys })
   })
-
-program
-  .command('import')
-  .description('Flatten a JSON file (or stdin) into onenv keys with reassembly metadata')
-  .argument('<namespace>', 'Namespace (supports @refs)')
-  .argument('[file]', 'Path to a JSON file to import (omit when using --from-stdin)')
-  .requiredOption('-g, --group <name>', 'Group name (required)')
-  .option('-k, --keys <strategy>', 'Key naming: upper-snake (default) or leaf', 'upper-snake')
-  .option('-p, --prefix <prefix>', 'Prefix prepended to every derived key')
-  .option('--dry-run', 'Print the import plan without writing')
-  .option('--overwrite', 'Overwrite existing keys regardless of group; atomic on failure')
-  .option('--from-stdin', 'Read JSON from stdin instead of a file')
-  .action(
-    async (
-      rawNamespace: string,
-      file: string | undefined,
-      options: {
-        group: string
-        keys?: string
-        prefix?: string
-        dryRun?: boolean
-        overwrite?: boolean
-        fromStdin?: boolean
-      },
-    ) => {
-      if (options.fromStdin && file) {
-        throw validationError(
-          'Cannot combine <file> with --from-stdin',
-          'Pass either a file path or --from-stdin, not both',
-        )
-      }
-      if (!options.fromStdin && !file) {
-        throw validationError('No JSON source provided', 'Pass a file path or use --from-stdin')
-      }
-      const namespace = validateNamespace(await resolveRef(rawNamespace))
-      const strategy = options.keys === 'leaf' ? 'leaf' : 'upper-snake'
-      const result = await importJsonFile(namespace, file, {
-        group: options.group,
-        keys: strategy,
-        prefix: options.prefix,
-        dryRun: options.dryRun,
-        overwrite: options.overwrite,
-        fromStdin: options.fromStdin,
-      })
-      await storeRefs([namespace])
-      if (options.dryRun) {
-        output({ namespace, group: result.group, plan: result.rows })
-        return
-      }
-      success(`Imported ${result.rows.length} keys into ${namespace} (group: ${result.group})`, {
-        namespace,
-        group: result.group,
-        count: result.rows.length,
-      })
-    },
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ onenv enable aws AWS_OLD_KEY
+      Re-enable a previously disabled key
+  $ onenv enable aws AWS_OLD_KEY AWS_OLDER_KEY
+      Re-enable multiple keys at once`,
   )
+
+registerImportCommand(program)
 
 program
   .command('build-file')
@@ -223,6 +200,15 @@ program
         })
       }
     },
+  )
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ onenv build-file oauth --group client_secret
+      Reassemble the JSON file and print it to stdout
+  $ onenv build-file oauth --group client_secret --out ./client_secret.json
+      Write the reassembled JSON to a file`,
   )
 
 program
@@ -249,6 +235,13 @@ program
     })
     success(`Created ${path}`)
   })
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ onenv init
+      Interactive picker — choose namespaces for .onenv.json`,
+  )
 
 program
   .command('run')
@@ -285,6 +278,17 @@ program
     })
     bindChildCleanup(child, injections)
   })
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ onenv run -- node app.js
+      Inject .onenv.json namespaces as env vars and run the command
+  $ onenv run --file gcp-sa:GOOGLE_APPLICATION_CREDENTIALS -- python upload.py
+      Materialize a grouped JSON to a tempfile and expose its path
+  $ onenv run --file-rw oauth/client_secret:GOOGLE_CREDS -- python refresh.py
+      Same as --file, but write the tempfile back to onenv on clean exit`,
+  )
 
 function collectOption(value: string, prev: string[]): string[] {
   return [...prev, value]
@@ -327,6 +331,15 @@ program
     })
     child.on('close', (code) => process.exit(code ?? 1))
   })
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ onenv export aws,cloudflare
+      Print enabled vars from both namespaces as JSON
+  $ onenv export aws -- terraform apply
+      Inject aws vars into the environment for a single command`,
+  )
 
 // Intent-first routing: bare argument → list namespace, no args → tui
 program

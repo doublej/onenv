@@ -42,4 +42,13 @@ export function registerEditCommand(program: Command): void {
     .argument('<key>', 'Variable name')
     .option('--value-stdin', 'Read value from stdin (strips one trailing newline)')
     .action(editAction)
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ onenv edit cloudflare CLOUDFLARE_API_TOKEN
+      Interactive prompt for the new value (TTY only)
+  $ pbpaste | onenv edit cloudflare CLOUDFLARE_API_TOKEN --value-stdin
+      Replace the value with whatever is on the clipboard`,
+    )
 }

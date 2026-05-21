@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { text } from 'node:stream/consumers'
+import type { Command } from 'commander'
 import { CliError, validationError } from '../lib/errors.js'
 import { type FlatEntry, flatten } from '../lib/json-flatten.js'
 import {
@@ -9,8 +10,10 @@ import {
   setValueWithMeta,
   unsetValue,
 } from '../lib/onenv-client.js'
+import { output, success } from '../lib/output.js'
+import { resolveRef, storeRefs } from '../lib/ref-store.js'
 import type { JsonLeafType } from '../lib/types.js'
-import { validateKey } from '../lib/validation.js'
+import { validateKey, validateNamespace } from '../lib/validation.js'
 
 export type KeyStrategy = 'upper-snake' | 'leaf'
 
@@ -222,4 +225,77 @@ function assertNoCollisions(rows: ImportPlanRow[]): void {
     `Key collisions detected:\n${detail}`,
     'Use --prefix to disambiguate or rename JSON keys',
   )
+}
+
+interface ImportCliOptions {
+  group: string
+  keys?: string
+  prefix?: string
+  dryRun?: boolean
+  overwrite?: boolean
+  fromStdin?: boolean
+}
+
+async function importAction(
+  rawNamespace: string,
+  file: string | undefined,
+  options: ImportCliOptions,
+): Promise<void> {
+  if (options.fromStdin && file) {
+    throw validationError(
+      'Cannot combine <file> with --from-stdin',
+      'Pass either a file path or --from-stdin, not both',
+    )
+  }
+  if (!options.fromStdin && !file) {
+    throw validationError('No JSON source provided', 'Pass a file path or use --from-stdin')
+  }
+  const namespace = validateNamespace(await resolveRef(rawNamespace))
+  const strategy: KeyStrategy = options.keys === 'leaf' ? 'leaf' : 'upper-snake'
+  const result = await importJsonFile(namespace, file, {
+    group: options.group,
+    keys: strategy,
+    prefix: options.prefix,
+    dryRun: options.dryRun,
+    overwrite: options.overwrite,
+    fromStdin: options.fromStdin,
+  })
+  await storeRefs([namespace])
+  if (options.dryRun) {
+    output({ namespace, group: result.group, plan: result.rows })
+    return
+  }
+  success(`Imported ${result.rows.length} keys into ${namespace} (group: ${result.group})`, {
+    namespace,
+    group: result.group,
+    count: result.rows.length,
+  })
+}
+
+export function registerImportCommand(program: Command): void {
+  program
+    .command('import')
+    .description('Flatten a JSON file (or stdin) into onenv keys with reassembly metadata')
+    .argument('<namespace>', 'Namespace (supports @refs)')
+    .argument('[file]', 'Path to a JSON file to import (omit when using --from-stdin)')
+    .requiredOption('-g, --group <name>', 'Group name (required)')
+    .option('-k, --keys <strategy>', 'Key naming: upper-snake (default) or leaf', 'upper-snake')
+    .option('-p, --prefix <prefix>', 'Prefix prepended to every derived key')
+    .option('--dry-run', 'Print the import plan without writing')
+    .option('--overwrite', 'Overwrite existing keys regardless of group; atomic on failure')
+    .option('--from-stdin', 'Read JSON from stdin instead of a file')
+    .action(importAction)
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ onenv import oauth ./client_secret.json --group oauth
+      Flatten a JSON file into onenv keys under the oauth group
+  $ cat secret.json | onenv import oauth --group oauth --from-stdin
+      Read JSON from stdin, no on-disk footprint
+  $ onenv import oauth ./new.json --group oauth --overwrite
+      Replace existing keys atomically
+  $ onenv import oauth ./client_secret.json --group oauth --dry-run
+      Preview the import plan without writing`,
+    )
 }
