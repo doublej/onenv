@@ -1,3 +1,4 @@
+import { text } from 'node:stream/consumers'
 import * as p from '@clack/prompts'
 import { validationError } from '../lib/errors.js'
 
@@ -17,4 +18,16 @@ export async function readValueFromPrompt(namespace: string, key: string): Promi
     },
   })
   return assertValue(value)
+}
+
+export async function readValueFromStdin(): Promise<string> {
+  const raw = await text(process.stdin)
+  const stripped = raw.endsWith('\n') ? raw.slice(0, -1) : raw
+  if (stripped.length === 0) {
+    throw validationError(
+      'Empty stdin value',
+      'Pipe a non-empty value: echo -n "secret" | onenv set <ns> <key> --value-stdin',
+    )
+  }
+  return stripped
 }
