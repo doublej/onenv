@@ -128,7 +128,7 @@ export function buildPrimer(version: string): PrimerData {
       key_regex: '^[A-Za-z_][A-Za-z0-9_]*$',
       key_max_length: 128,
       injection_warning:
-        'FOOTGUN: "export" and "run" inject BARE keys (no namespace prefix) as env vars. If the same KEY exists in two namespaces, the order is unspecified and the last write wins silently. Keep keys unique across namespaces you combine.',
+        'BARE KEYS: "export" and "run" inject keys without a namespace prefix as env vars. As of 0.6, the same enabled key existing in more than one of the merged namespaces is a hard error (VALIDATION) rather than a silent last-write-wins. Resolve by disabling the duplicate or splitting the namespaces. Keep keys unique across namespaces you combine.',
     },
     refs: {
       description:

@@ -3,21 +3,36 @@ import type { CommandSpec, ErrorsSection, StateEntry } from './prime-data.js'
 export function buildCommands(): CommandSpec[] {
   return [
     {
-      name: 'set <ns> <key>',
+      name: 'set <ns> <key> [--value-stdin]',
       description:
-        'Create or update a secret. Reads the value from an interactive password prompt.',
+        'Create or update a secret. Reads the value from an interactive password prompt by default. --value-stdin reads the raw value from stdin instead (use this for scripting: `echo -n "secret" | onenv set ns KEY --value-stdin`). Refuses to run in a non-TTY context without --value-stdin — previously the prompt silently swallowed piped bytes and hung.',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,key}.',
     },
     {
-      name: 'edit <ns> <key>',
+      name: 'edit <ns> <key> [--value-stdin]',
       description:
-        'Update an existing secret. Reads the new value from an interactive password prompt.',
+        'Update an existing secret. Reads the new value from an interactive password prompt by default. --value-stdin reads from stdin (scripting-friendly). Same non-TTY guard as set.',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,key}.',
     },
     {
-      name: 'unset <ns> <key...>',
-      description: 'Delete one or more secrets from 1Password. Multiple keys allowed.',
+      name: 'get <ns> <key> [--fingerprint] [--meta]',
+      description:
+        'Read a single secret value. Default: prints the raw value (TTY) or {ok:true,value} (JSON). --fingerprint prints "sha256:<hex>" of the value instead — use this to compare against a shell value without exposing the secret. --meta includes group/path/type metadata in the JSON output.',
+      output:
+        'TTY: raw value (or fingerprint). JSON: {ok:true,namespace,key,value?,fingerprint?,group?,path?,type?}.',
+    },
+    {
+      name: 'unset <ns> <key...> [-y, --yes]',
+      description:
+        'Delete one or more secrets from 1Password. Multiple keys allowed. Prompts for confirmation in a TTY. In a non-TTY context (scripts, CI) --yes is required — without it the command refuses and exits with VALIDATION rather than deleting unattended.',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,keys}.',
+    },
+    {
+      name: 'check',
+      description:
+        'Preflight that compares process.env against the project\'s onenv namespaces (reads .onenv.json) and reports per-key whether the shell value matches, differs, or is missing. Never prints values — comparison is done via sha256 fingerprints internally. Use this before "onenv run" to spot drift between an already-loaded shell env and what onenv would inject.',
+      output:
+        'JSON: {ok:true, keys:[{namespace,key,status:"match"|"differ"|"missing-in-shell"|"missing-in-onenv"}]}. TTY: grouped human summary.',
     },
     {
       name: 'list [ns] [--groups]',
@@ -50,9 +65,9 @@ export function buildCommands(): CommandSpec[] {
       output: 'Mirrors the child exit code. No onenv output written.',
     },
     {
-      name: 'import <ns> <file> [--group <name>] [--keys upper-snake|leaf] [--prefix <s>] [--dry-run]',
+      name: 'import <ns> [file] -g, --group <name> [--overwrite] [--from-stdin] [--keys upper-snake|leaf] [--prefix <s>] [--dry-run]',
       description:
-        'Flatten a JSON file into onenv keys with reassembly metadata (group, path, type stored as STRING fields on each item). Group name defaults to the filename without extension. --keys upper-snake (default) joins the JSON path with underscores ("installed.client_id" → INSTALLED_CLIENT_ID, "scopes[0]" → SCOPES_0). --keys leaf uses only the last key segment, raising on collisions. --prefix prepends a value to every derived key. Aborts on key collisions or when an existing key has no group / a different group. --dry-run prints the plan without writing.',
+        'Flatten a JSON file into onenv keys with reassembly metadata (group, path, type stored as STRING fields on each item). --group is REQUIRED (previously derived from filename, which leaked temp paths into 1Password). --from-stdin reads JSON from stdin instead of a file path (no filesystem footprint — file arg must be omitted). --overwrite replaces existing keys atomically: either every write lands, or every touched key is restored to its pre-import state on any failure. Without --overwrite, aborts on key collisions or when an existing key has no group / a different group. --keys upper-snake (default) joins the JSON path with underscores ("installed.client_id" → INSTALLED_CLIENT_ID, "scopes[0]" → SCOPES_0). --keys leaf uses only the last key segment, raising on collisions. --prefix prepends a value to every derived key. --dry-run prints the plan without writing.',
       output:
         'TTY: green confirmation. JSON: dry-run → {namespace, group, plan:[{key,path,type}]}. Otherwise → {ok:true,message,namespace,group,count}.',
     },
@@ -65,12 +80,14 @@ export function buildCommands(): CommandSpec[] {
     },
     {
       name: 'export <ns[,ns2,...]>',
-      description: 'Fetch enabled secrets across the listed namespaces and emit as JSON.',
+      description:
+        'Fetch enabled secrets across the listed namespaces and emit as JSON. Hard-errors with VALIDATION if the same enabled key exists in more than one of the listed namespaces — previously the merge silently last-write-wins. Resolve by disabling the duplicate or splitting the namespaces.',
       output: 'Raw object {KEY:"value",...}. Bare keys, see naming.injection_warning.',
     },
     {
       name: 'export <ns[,ns2,...]> -- <cmd...>',
-      description: 'Same as export, but exec <cmd> with the secrets injected instead of printing.',
+      description:
+        'Same as export, but exec <cmd> with the secrets injected instead of printing. Same cross-namespace collision check applies.',
       output: 'Mirrors the child exit code. No onenv output written.',
     },
     {
