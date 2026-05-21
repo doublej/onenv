@@ -4,16 +4,11 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Overview
 
-Monorepo with two independent TypeScript sub-projects that manage secrets stored in 1Password via the `op` CLI. A shared `install.ts` bootstraps both.
+`onenv` is a single TypeScript CLI that manages secrets stored in 1Password via the `op` CLI. Source lives in `onenv-manager/` (the published binary is named `onenv`). `install.ts` at the repo root is an interactive setup wizard.
 
-- **onenv-manager** — CLI + interactive TUI for managing secrets (Commander, @clack/prompts)
-- **onenv-api** — HTTP API (Express) for agent-driven secret access with permission brokering
-
-Both have a parallel `onenv-client.ts` / `manager-service.ts` / `state-store.ts` architecture (duplicated, not shared as a package — copies have diverged).
+The legacy `onenv-api/` HTTP server is being retired and should not be referenced in user-facing docs or new features. Code may still exist on disk pending removal — leave it alone unless explicitly asked.
 
 ## Commands
-
-### onenv-manager
 
 ```bash
 cd onenv-manager
@@ -27,19 +22,6 @@ bun run build       # tsc → dist/
 
 Single test: `bun run vitest run src/lib/state-store.test.ts`
 
-### onenv-api
-
-```bash
-cd onenv-api
-bun run biome check --write src/   # lint + format
-bunx tsc --noEmit                  # typecheck
-bun run test                       # tests (vitest)
-bun run dev                        # dev with watch
-bun run build                      # tsc → dist/
-```
-
-Single test: `bun run vitest run src/lib/config.test.ts`
-
 ### Installer
 
 ```bash
@@ -49,11 +31,11 @@ bun run install.ts    # interactive setup wizard (requires op CLI)
 ## Architecture
 
 ```
-onenv-client.ts       → spawns `op` CLI, CRUD on 1Password items
+src/lib/onenv-client.ts    → spawns `op` CLI, CRUD on 1Password items
     ↓
-manager-service.ts    → orchestration: combines onenv-client + state-store
-    ↓                    (exported functions consumed by CLI/API routes)
-state-store.ts        → disabled-key tracking (~/.config/onenv-manager/state.json)
+src/lib/manager-service.ts → orchestration: combines onenv-client + state-store
+    ↓                         (exported functions consumed by every CLI command)
+src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/state.json)
 ```
 
 ### 1Password data model
@@ -65,25 +47,22 @@ state-store.ts        → disabled-key tracking (~/.config/onenv-manager/state.j
 - Secret stored in the `credential` field
 - Imported JSON files (via `onenv import`) carry extra STRING fields `group`, `path`, `type` per leaf for round-trip via `onenv build-file`
 
-### onenv-api specifics
+### Source layout
 
-- `src/server.ts` — Express routes, Zod validation, auth middleware (`x-onenv-token` header), pre-auth (per-IP, all methods) and post-auth (per-token, mutating only) rate limiters
-- `src/lib/permission.ts` — macOS AppleScript permission dialog
-- `src/lib/config.ts` — loads env vars with defaults; `AGENT_API_TOKEN` is required
-- All mutating endpoints require permission approval before executing
-
-### onenv-manager specifics
-
-- `src/cli.ts` — Commander-based CLI entry point (set, edit, unset, list [--groups], disable, enable, init, run [--file], export, import, build-file, prime, tui)
+- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, disable, enable, import, build-file, init, run, export.
+- `src/commands/set.ts` / `edit.ts` / `unset.ts` / `get.ts` / `check.ts` — extracted single-key commands (each exports an action + `registerXCommand`)
+- `src/commands/_prompt.ts` — `assertValue`, `readValueFromPrompt`, `readValueFromStdin` shared by `set` and `edit`
 - `src/commands/tui.ts` — interactive @clack/prompts TUI loop
-- `src/commands/prime.ts` — agent primer; XML by default, JSON when `--json` or piped
+- `src/commands/prime.ts` — agent primer dispatcher (XML on TTY, Markdown when piped, JSON with `--json`)
 - `src/commands/prime-data.ts` + `prime-data-cli.ts` + `prime-data-api.ts` — primer data shape
-- `src/commands/prime-xml.ts` — flat XML renderer (top-level tags with prose bodies)
-- `src/commands/import.ts` — flatten a JSON file into onenv keys with `group`/`path`/`type` metadata
+- `src/commands/prime-xml.ts` / `prime-md.ts` — XML and Markdown renderers; `prime-logo.ts` holds the ASCII key banner
+- `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback and `--from-stdin`
 - `src/commands/build-file.ts` — reassemble a grouped JSON file from stored leaves
 - `src/commands/run-files.ts` — `--file group:VAR` materialization + child-process cleanup helpers
+- `src/lib/fingerprint.ts` — `sha256:<hex>` helper used by `get --fingerprint` and `check`
 - `src/lib/json-flatten.ts` — pure flatten/unflatten with empty-container sentinels
 - `src/lib/materialize.ts` — write rebuilt JSON to a `0600` tempfile under `XDG_RUNTIME_DIR`
+- `src/lib/manager-service.ts` — orchestration; includes `exportEnabledValuesStrict` (hard-errors on cross-namespace key collisions) and `getNamespaceVarsWithFingerprints`
 - `src/lib/project-config.ts` — `.onenv.json` read/write for per-project setup
 - `src/lib/errors.ts` — structured CLI error types
 - `src/lib/output.ts` — JSON/text output formatting
@@ -91,7 +70,7 @@ state-store.ts        → disabled-key tracking (~/.config/onenv-manager/state.j
 - `src/lib/op-token.ts` — `op://` reference resolution + cache at `~/.config/onenv-manager/op-token`
 - `src/lib/validation.ts` — namespace + key regex/length validation
 - `src/lib/version.ts` — reads version from `package.json` at runtime
-- `src/lib/types.ts` — shared `NamespaceVar`, `StateFile`, and `JsonLeafType` types
+- `src/lib/types.ts` — shared `NamespaceVar` (with optional `fingerprint`), `StateFile`, and `JsonLeafType` types
 
 ## Conventions
 
@@ -99,5 +78,4 @@ state-store.ts        → disabled-key tracking (~/.config/onenv-manager/state.j
 - Biome for linting/formatting (not ESLint/Prettier)
 - Vitest for testing, co-located test files (`*.test.ts`)
 - Strict TypeScript, `.js` extensions in imports
-- `onenv-client.ts` is duplicated across both projects (not a shared package; copies have diverged)
-- State file path: `~/.config/onenv-manager/state.json` (or `$XDG_CONFIG_HOME`)
+- State file path: `~/.config/onenv-manager/state.json` (or `$XDG_CONFIG_HOME`). The directory name is historical — do not introduce a parallel `~/.config/onenv/` location.

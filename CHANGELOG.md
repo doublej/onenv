@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.6.0 — 2026-05-21
+
+### Added
+
+- **`onenv get <ns> <key>`** — read a single value. `--fingerprint` prints `sha256:<hex>` instead so you can compare without exposing the secret; `--meta` includes group/path/type.
+- **`onenv check`** — preflight that compares `process.env` against the project's onenv namespaces and reports per-key `match` / `differ` / `missing` / `shell-only`. Never prints values. Exits non-zero on drift.
+- **`onenv set --value-stdin` / `onenv edit --value-stdin`** — read the value from stdin for scriptable, history-free use (`echo -n "secret" | onenv set ns KEY --value-stdin`, `pbpaste | onenv edit ns KEY --value-stdin`).
+- **`onenv import --overwrite`** — replace existing keys. Atomic: either every write lands, or every touched key is restored to its pre-import state via an in-memory snapshot.
+- **`onenv import --from-stdin`** — read the JSON from stdin instead of a file path. No filesystem footprint.
+- **`onenv unset -y, --yes`** — skip the confirmation prompt (now required in non-TTY contexts).
+
+### Changed (breaking)
+
+- **`onenv import --group <name>` is now required.** Filename-derived group names leaked temp file paths into 1Password. Old `--group` auto-derivation removed.
+- **`onenv unset` now prompts in TTY contexts and refuses in non-TTY contexts unless `--yes` is passed.**
+- **`onenv set` and `onenv edit` refuse to read from non-TTY stdin unless `--value-stdin` is passed.** Previously the @clack password prompt silently swallowed piped bytes and hung.
+- **`onenv export` and `onenv run` hard-error when the same enabled key exists in multiple project namespaces.** Previously the merge silently last-write-wins. Resolve by disabling the duplicate or splitting the namespaces.
+
+### Fixed
+
+- **Stop writing a default 90-day `expires` field on every `set` / `edit`.** The expiry policy is the user's decision, not onenv's — silently rewriting an expiration date the user had configured manually in 1Password was a footgun. Existing items keep whatever expiration (if any) you've set; new items leave the field empty.
+
 ## 0.5.0 — 2026-05-15
 
 ### Changed

@@ -18,8 +18,8 @@ jobs:
       - uses: 1password/install-cli-action@v1
       - uses: oven-sh/setup-bun@v2
 
-      - run: bun install
-      - run: bun link onenv-manager   # or install from registry
+      - run: cd onenv-manager && bun install && bun run build && bun link
+      - run: bun link onenv               # makes `onenv` available on PATH
 
       - name: Run with secrets
         env:
@@ -50,13 +50,6 @@ Pass the SA token via:
 - Kubernetes: a Secret mounted as env var.
 
 Never bake the token into the image. Don't commit it to a Helm chart.
-
-## Server daemons (launchd / systemd)
-
-For `onenv-api` running as a long-lived service:
-
-- macOS: see `docs/examples/onenv-api.plist`.
-- Linux: drop-in unit file with `Environment="OP_SERVICE_ACCOUNT_TOKEN=..."` or `EnvironmentFile=/etc/onenv-api.env` (root-only mode 0600).
 
 ## Best practices
 

@@ -7,23 +7,30 @@
 | [Bun](https://bun.sh) | Yes | `curl -fsSL https://bun.sh/install \| bash` |
 | [1Password CLI](https://developer.1password.com/docs/cli/) | Yes | `brew install 1password-cli` |
 | [1Password desktop app](https://1password.com/downloads) | Yes | Required for biometric unlock / CLI integration |
-| [just](https://github.com/casey/just) | Optional | `brew install just` (task runner for manager) |
-| macOS | Yes | Desktop permission dialog uses AppleScript |
+| [just](https://github.com/casey/just) | Optional | `brew install just` (task runner) |
+| macOS | Recommended | All workflows tested on macOS; Linux works headless with a service account |
 
-## Clone & install
+## Get it
 
 ```bash
-git clone <repo-url> onenv && cd onenv
-
-cd onenv-manager && bun install && cd ..
-cd onenv-api && bun install && cd ..
+git clone https://github.com/doublej/onenv && cd onenv
+bun install.ts             # interactive setup wizard — does the rest
 ```
 
-## Build
+The wizard:
+
+1. Installs dependencies and builds the CLI.
+2. Links `onenv` system-wide via `bun link`.
+3. Walks you through 1Password sign-in and vault creation.
+4. Offers to scan your projects for existing `.env` files and import them.
+
+If you'd rather do it by hand:
 
 ```bash
-cd onenv-manager && bun run build && cd ..
-cd onenv-api && bun run build && cd ..
+cd onenv-manager
+bun install
+bun run build
+bun link               # makes `onenv` global
 ```
 
 ## 1Password setup
@@ -35,146 +42,62 @@ cd onenv-api && bun run build && cd ..
    op vault create onenv
    ```
 
-## Configure — agent-api
-
-Copy the example env file and fill in values:
-
-```bash
-cp onenv-api/.env.example onenv-api/.env
-```
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `AGENT_API_TOKEN` | Yes | — | API authentication token |
-| `API_HOST` | No | `127.0.0.1` | Server bind address |
-| `API_PORT` | No | `4317` | Server port |
-| `PERMISSION_TIMEOUT_MS` | No | `120000` | Permission request timeout (ms) |
-| `ONENV_VAULT` | No | `onenv` | 1Password vault name |
-| `ONENV_CATEGORY` | No | `API Credential` | 1Password item category |
-| `OP_SERVICE_ACCOUNT_TOKEN` | No | — | Skips biometric prompts (see below) |
-
-### Avoiding constant 1Password approvals
+## Avoiding constant biometric prompts
 
 By default `op` requires biometric unlock (Touch ID / desktop app) for every
-secret read. Agents calling `onenv-api` repeatedly — and any process invoking
-the `onenv` CLI — will trigger prompt spam.
+secret read. Any non-trivial scripting will hammer that prompt.
 
 To run headless / no-prompts, create a **1Password service account**:
 
 1. 1Password web → **Developer** → **Service Accounts** → **Create**.
 2. Grant **read + write** access to the `onenv` vault.
-3. Set `OP_SERVICE_ACCOUNT_TOKEN` for both the API (`onenv-api/.env`) and the
-   shell that runs the `onenv` CLI. Two forms accepted:
+3. Set `OP_SERVICE_ACCOUNT_TOKEN` in the shell that runs `onenv`. Two forms accepted:
 
-   ```
+   ```bash
    # literal — fastest, but plaintext on disk
-   OP_SERVICE_ACCOUNT_TOKEN=ops_eyJ...
+   export OP_SERVICE_ACCOUNT_TOKEN=ops_eyJ...
 
    # 1Password reference — resolved on first use via `op read`
    # (one biometric prompt; cached afterwards, zero during normal operation)
-   OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<item-id>/credential
+   export OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<item-id>/credential
    ```
 
-4. Restart the API. Startup log should show `1password auth: service-account`.
-   For the CLI, the first command resolves the reference; subsequent commands
-   read the cached literal at `~/.config/onenv-manager/op-token` (mode 0600).
+The first command resolves the reference; subsequent commands read the cached literal at `~/.config/onenv-manager/op-token` (mode 0600). After rotating the SA token, delete that cache file (or let the next failed `op` call self-invalidate it) so the CLI re-resolves.
 
 Tradeoffs:
 - Token compromise = vault compromise. Store carefully (keychain / sealed env).
-- Service accounts can't access personal vaults — keep `onenv` vault scoped.
+- Service accounts can't access personal vaults — keep the `onenv` vault scoped.
 - Audit log will attribute reads to the service account, not your user.
-- After rotating the SA token, delete `~/.config/onenv-manager/op-token` (or
-  let the next failed `op` call self-invalidate the cache) so the CLI
-  re-resolves the new value.
 
-> **Note:** The code reads env vars via `process.env` directly — there is no built-in dotenv loader. Use Bun's `--env-file .env` flag or Node 20+'s `--env-file` to load `.env` files:
->
-> ```bash
-> bun --env-file .env run start
-> ```
-
-## Configure — manager (optional)
-
-```bash
-cp onenv-manager/.env.example onenv-manager/.env
-```
+## Configuration
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
+| `OP_SERVICE_ACCOUNT_TOKEN` | No | — | Skips biometric prompts. Literal `ops_eyJ...` or `op://...` reference. |
 | `ONENV_VAULT` | No | `onenv` | 1Password vault name |
 | `ONENV_CATEGORY` | No | `API Credential` | 1Password item category |
+| `XDG_CONFIG_HOME` | No | `~/.config` | Where state and the token cache live |
+| `XDG_RUNTIME_DIR` | No | `os.tmpdir()` | Where `onenv run --file` materializes JSON tempfiles |
 
-## Link CLI globally (manager)
+`onenv` reads env vars via `process.env` directly — there is no built-in
+dotenv loader. Set them in your shell rc, or wrap with Bun's `--env-file .env`
+flag if you really want a file.
 
-```bash
-cd onenv-manager && bun link
-```
-
-This makes `onenv` available system-wide.
-
-## Run & verify
-
-### Manager
+## Verify
 
 ```bash
-# Development mode (with watch)
-cd onenv-manager && bun run dev
-# or with just
-just dev
-
-# Production (after `bun link` makes `onenv` global)
-onenv list
+onenv list                 # all namespaces in your vault (or [] if empty)
+onenv set demo HELLO       # interactive prompt, type any value
+onenv get demo HELLO --fingerprint
+# sha256:f5a1...
+onenv unset demo HELLO --yes
 ```
 
-### Agent API
+## State files
 
-```bash
-cd onenv-api
-
-# Development
-bun run dev
-
-# Production
-bun run start
-
-# Verify
-curl http://127.0.0.1:4317/health
-```
-
-### Auth headers (agent-api)
-
-All endpoints except `/health` require:
-
-```
-x-onenv-token: <your-AGENT_API_TOKEN>
-```
-
-Optional agent identifier for permission prompts:
-
-```
-x-agent-name: my-agent
-```
-
-## State file location
-
-The manager stores disabled-key state at:
-
-```
-~/.config/onenv-manager/state.json
-```
-
-Or `$XDG_CONFIG_HOME/onenv-manager/state.json` if `XDG_CONFIG_HOME` is set.
-
-## API endpoints
-
-| Method | Path | Auth | Permission |
-|--------|------|------|------------|
-| GET | `/health` | No | No |
-| GET | `/v1/namespaces` | Yes | No |
-| GET | `/v1/namespaces/:namespace/vars` | Yes | No |
-| POST | `/v1/vars/set` | Yes | Yes |
-| POST | `/v1/vars/edit` | Yes | Yes |
-| POST | `/v1/vars/unset` | Yes | Yes |
-| POST | `/v1/vars/disable` | Yes | Yes |
-| POST | `/v1/vars/enable` | Yes | Yes |
-| POST | `/v1/env/export` | Yes | Yes |
+| Path | What it holds |
+|------|---------------|
+| `~/.config/onenv-manager/state.json` | Which keys are `disable`d (excluded from `run` / `export`) |
+| `~/.config/onenv-manager/op-token` | Cached service-account literal, mode 0600 |
+| `~/.config/onenv-manager/refs.json` | Most-recent namespace list for `@1` / `@2` / `@last` |
+| `.onenv.json` (per project) | Namespaces this project pulls — commit it |

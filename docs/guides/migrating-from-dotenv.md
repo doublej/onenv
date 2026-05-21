@@ -26,7 +26,14 @@ For one-off keys, use the interactive prompt:
 onenv set my-app MY_KEY     # paste the value at the masked prompt
 ```
 
-`onenv set` does not have a `--stdin` flag — values come from the interactive prompt only, by design (avoids leaking secrets into shell history).
+When you need to script it (migrating from another secret store, piping from `op read`, `pbpaste`, `aws ssm get-parameter`, etc.), use `--value-stdin` so the value never lands in your shell history:
+
+```bash
+op read "op://Private/my-app/credential" | onenv set my-app MY_KEY --value-stdin
+pbpaste | onenv set my-app MY_KEY --value-stdin
+```
+
+Without `--value-stdin` the CLI refuses to read from a non-TTY stdin — this is intentional. The old @clack password prompt would silently swallow piped bytes and hang.
 
 ## 3. Verify
 

@@ -29,7 +29,18 @@ Use for: debug and one-off namespace selection. Prefer `run` when a project has 
 
 Best: `onenv run --` from parent shell, read via `process.env.MY_KEY`. Don't shell out to `onenv export` from app code.
 
-If must, use HTTP API (`onenv-api`) — see [`agent-api.md`](agent-api.md).
+## Preflight: detect drift before you run
+
+`onenv check` reports per-key `match` / `differ` / `missing` / `shell-only` between the current shell environment and the project's onenv-stored secrets. Comparison is done via SHA-256 fingerprints — values are never printed. Exits non-zero on any drift, so you can drop it in a precommit hook or shell prompt.
+
+```bash
+onenv check
+onenv get aws AWS_SECRET_ACCESS_KEY --fingerprint     # compare one key
+```
+
+## Cross-namespace key collisions
+
+If two project namespaces both define the same enabled key, `run` and `export` hard-error. Resolve by disabling the duplicate (`onenv disable <ns> <KEY>`) or splitting the namespaces. The merge used to silently last-write-wins; that's gone.
 
 ## Disabled keys
 

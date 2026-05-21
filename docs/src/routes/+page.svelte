@@ -44,19 +44,14 @@
         '.onenv.json declares which namespaces a project pulls. No global blast radius — a frontend project never sees backend keys it shouldn’t. Cross-namespace key collisions are a hard error, not silent last-write-wins.',
     },
     {
-      title: 'Confirmation guardrails — new in 0.6',
+      title: 'Non-TTY guardrails — new in 0.6',
       description:
-        'Set ONENV_CONFIRM_MUTATIONS=1 to require a macOS approval dialog before any write. onenv unset additionally refuses to delete from a non-TTY context unless --yes is passed.',
+        'onenv unset refuses to delete from a non-interactive context unless --yes is passed. onenv set and onenv edit refuse to read from a non-TTY stdin unless --value-stdin is passed — no more silent hangs when a piped value disappears into the password prompt.',
     },
     {
       title: 'Disable without deleting',
       description:
         'onenv disable hides a key from run/export but keeps it in 1Password. enable restores. State lives in ~/.config/onenv-manager/state.json.',
-    },
-    {
-      title: 'Agent HTTP API',
-      description:
-        'onenv-api exposes the same surface over HTTP — every mutation gates behind a macOS AppleScript desktop dialog before executing.',
     },
     {
       title: 'Agent primer',
@@ -134,7 +129,7 @@
   <div class="container">
     <h1>onenv</h1>
     <p class="description">
-      A 1Password-backed environment variable manager. Replaces <code>.env</code> files with per-key 1Password items, a scriptable CLI built for agents and humans, and an HTTP API for remote workers with permission brokering.
+      A 1Password-backed environment variable manager. Replaces <code>.env</code> files with per-key 1Password items and a scriptable CLI built for agents and humans.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub</a>
