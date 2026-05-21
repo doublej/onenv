@@ -18,7 +18,10 @@ vi.mock('./state-store.js', () => ({
 
 const onenvClient = await import('./onenv-client.js')
 const stateStore = await import('./state-store.js')
-const { exportEnabledValuesStrict } = await import('./manager-service.js')
+const { exportEnabledValuesStrict, getNamespaceVarsWithFingerprints } = await import(
+  './manager-service.js'
+)
+const { fingerprint } = await import('./fingerprint.js')
 
 type Values = Record<string, string>
 
@@ -96,5 +99,58 @@ describe('exportEnabledValuesStrict', () => {
     expect(betaIdx).toBeGreaterThan(alphaIdx)
     expect(message).toMatch(/ALPHA: a, b/)
     expect(message).toMatch(/BETA: a, b, c/)
+  })
+})
+
+describe('getNamespaceVarsWithFingerprints', () => {
+  beforeEach(() => {
+    vi.mocked(onenvClient.listItemsWithMeta).mockReset()
+    vi.mocked(onenvClient.listValues).mockReset()
+    vi.mocked(stateStore.getDisabledMap).mockReset()
+  })
+
+  it('returns each key with its sha256 fingerprint and metadata', async () => {
+    vi.mocked(onenvClient.listItemsWithMeta).mockResolvedValue([
+      { key: 'AWS_KEY', group: 'aws', path: 'aws.key', type: 'string' },
+      { key: 'AWS_SECRET', group: 'aws', path: 'aws.secret', type: 'string' },
+    ])
+    vi.mocked(onenvClient.listValues).mockResolvedValue({
+      AWS_KEY: 'a',
+      AWS_SECRET: 'b',
+    })
+    mockDisabled({ aws: ['AWS_SECRET'] })
+
+    const result = await getNamespaceVarsWithFingerprints('aws')
+    expect(result).toEqual([
+      {
+        key: 'AWS_KEY',
+        disabled: false,
+        group: 'aws',
+        path: 'aws.key',
+        type: 'string',
+        fingerprint: fingerprint('a'),
+      },
+      {
+        key: 'AWS_SECRET',
+        disabled: true,
+        group: 'aws',
+        path: 'aws.secret',
+        type: 'string',
+        fingerprint: fingerprint('b'),
+      },
+    ])
+  })
+
+  it('never includes the raw value', async () => {
+    vi.mocked(onenvClient.listItemsWithMeta).mockResolvedValue([
+      { key: 'KEY', group: 'g', path: 'p', type: 'string' },
+    ])
+    vi.mocked(onenvClient.listValues).mockResolvedValue({ KEY: 'super-secret-value' })
+    mockDisabled({})
+
+    const result = await getNamespaceVarsWithFingerprints('ns')
+    const serialized = JSON.stringify(result)
+    expect(serialized).not.toContain('super-secret-value')
+    expect(result[0].fingerprint).toBe(fingerprint('super-secret-value'))
   })
 })

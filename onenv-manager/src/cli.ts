@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process'
 import * as p from '@clack/prompts'
 import { Command } from 'commander'
 import { buildFile } from './commands/build-file.js'
+import { registerCheckCommand } from './commands/check.js'
 import { registerEditCommand } from './commands/edit.js'
 import { registerGetCommand } from './commands/get.js'
 import { importJsonFile } from './commands/import.js'
@@ -19,7 +20,10 @@ import {
   getNamespaceVars,
 } from './index.js'
 import { validationError } from './lib/errors.js'
-import { getNamespaceVarsWithMeta } from './lib/manager-service.js'
+import {
+  getNamespaceVarsWithFingerprints,
+  getNamespaceVarsWithMeta,
+} from './lib/manager-service.js'
 import { ensureServiceAccountToken } from './lib/op-token.js'
 import { handleError, output, setJsonMode, success } from './lib/output.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
@@ -69,21 +73,28 @@ program
   .description('List namespaces or variables in a namespace')
   .argument('[namespace]', 'Namespace (supports @refs)')
   .option('--groups', 'Group keys by their group field (slower: fetches metadata per item)')
-  .action(async (rawNamespace: string | undefined, options: { groups?: boolean }) => {
-    if (!rawNamespace) {
-      const namespaces = await getNamespaces()
-      await storeRefs(namespaces)
-      output(namespaces)
-      return
-    }
-    const namespace = validateNamespace(await resolveRef(rawNamespace))
-    await storeRefs([namespace])
-    if (options.groups) {
-      output(groupVars(await getNamespaceVarsWithMeta(namespace)))
-      return
-    }
-    output(await getNamespaceVars(namespace))
-  })
+  .option('--meta', 'Include group, path, type, and sha256 fingerprint per key (slower)')
+  .action(
+    async (rawNamespace: string | undefined, options: { groups?: boolean; meta?: boolean }) => {
+      if (!rawNamespace) {
+        const namespaces = await getNamespaces()
+        await storeRefs(namespaces)
+        output(namespaces)
+        return
+      }
+      const namespace = validateNamespace(await resolveRef(rawNamespace))
+      await storeRefs([namespace])
+      if (options.groups) {
+        output(groupVars(await getNamespaceVarsWithMeta(namespace)))
+        return
+      }
+      if (options.meta) {
+        output(await getNamespaceVarsWithFingerprints(namespace))
+        return
+      }
+      output(await getNamespaceVars(namespace))
+    },
+  )
 
 function groupVars(vars: NamespaceVar[]): Record<string, NamespaceVar[]> {
   const buckets: Record<string, NamespaceVar[]> = {}
@@ -99,6 +110,7 @@ registerGetCommand(program)
 registerSetCommand(program)
 registerEditCommand(program)
 registerUnsetCommand(program)
+registerCheckCommand(program)
 
 program
   .command('disable')

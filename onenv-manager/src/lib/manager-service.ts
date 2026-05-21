@@ -1,4 +1,5 @@
 import { validationError } from './errors.js'
+import { fingerprint } from './fingerprint.js'
 import {
   type GroupEntry,
   type ItemMeta,
@@ -92,6 +93,23 @@ export async function getNamespaceVarsWithMeta(namespace: string): Promise<Names
     group: it.group,
     path: it.path,
     type: it.type,
+  }))
+}
+
+export async function getNamespaceVarsWithFingerprints(namespace: string): Promise<NamespaceVar[]> {
+  const [items, values, disabledMap] = await Promise.all([
+    listItemsWithMeta(namespace),
+    listValues(namespace),
+    getDisabledMap(),
+  ])
+  const disabled = new Set(disabledMap[namespace] ?? [])
+  return items.map((it) => ({
+    key: it.key,
+    disabled: disabled.has(it.key),
+    group: it.group,
+    path: it.path,
+    type: it.type,
+    fingerprint: values[it.key] !== undefined ? fingerprint(values[it.key]) : undefined,
   }))
 }
 

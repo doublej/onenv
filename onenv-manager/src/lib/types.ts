@@ -7,6 +7,7 @@ export interface NamespaceVar {
   group?: string
   path?: string
   type?: JsonLeafType
+  fingerprint?: string
 }
 
 export interface StateFile {
