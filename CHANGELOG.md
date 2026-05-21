@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.0 — 2026-05-22
+
+### Removed
+
+- **`onenv-api` package deleted.** The Express HTTP server is gone — the repository is now a single CLI binary (`onenv`). External-consumer audit turned up zero callers (no running processes, no launchctl entries, no LaunchAgents, no references across `~/Documents/development` or `~/.config`). The dedicated `docs/guides/agent-api.md` and `docs/examples/onenv-api.plist` are removed too, along with the api job in `.github/workflows/ci.yml`. The single distinguishing capability — desktop permission gating — has been ported to the CLI (see below).
+
+### Added
+
+- **`ONENV_CONFIRM_MUTATIONS=1` opt-in confirm-on-write.** When enabled, `onenv set`, `edit`, `unset`, and `import` display a macOS AppleScript dialog before writing to 1Password. Deny or timeout (default 120000ms; tune via `PERMISSION_TIMEOUT_MS`) raises `PERMISSION_DENIED` and nothing changes. macOS only; the CLI errors with `PERMISSION_UNSUPPORTED` if the flag is set on Linux or Windows. Off by default — existing scripts and pipelines see no change.
+- **Primer `<permission>` section** replaces the old `<api>` section in `onenv prime` (XML, Markdown, and JSON), documenting the trigger env var, gated commands, and error code.
+
+### Changed
+
+- **`install.ts` is simpler.** Drops the `onenv-api` install/build/configure steps and the `AGENT_API_TOKEN` prompt. Outro now nudges `ONENV_CONFIRM_MUTATIONS=1` instead of pointing at `curl http://127.0.0.1:4317/health`.
+- **`README.md`, `INSTALL.md`, `CLAUDE.md`, `AGENTS.md`, `docs/CLAUDE-onenv.md`, and the docs landing page** are all single-binary now — no more two-piece architecture diagrams or HTTP endpoint tables.
+
 ## 0.5.0 — 2026-05-15
 
 ### Changed
