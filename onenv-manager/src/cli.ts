@@ -135,19 +135,37 @@ program
 
 program
   .command('import')
-  .description('Flatten a JSON file into onenv keys with reassembly metadata')
+  .description('Flatten a JSON file (or stdin) into onenv keys with reassembly metadata')
   .argument('<namespace>', 'Namespace (supports @refs)')
-  .argument('<file>', 'Path to a JSON file to import')
-  .option('-g, --group <name>', 'Group name (defaults to filename without extension)')
+  .argument('[file]', 'Path to a JSON file to import (omit when using --from-stdin)')
+  .requiredOption('-g, --group <name>', 'Group name (required)')
   .option('-k, --keys <strategy>', 'Key naming: upper-snake (default) or leaf', 'upper-snake')
   .option('-p, --prefix <prefix>', 'Prefix prepended to every derived key')
   .option('--dry-run', 'Print the import plan without writing')
+  .option('--overwrite', 'Overwrite existing keys regardless of group; atomic on failure')
+  .option('--from-stdin', 'Read JSON from stdin instead of a file')
   .action(
     async (
       rawNamespace: string,
-      file: string,
-      options: { group?: string; keys?: string; prefix?: string; dryRun?: boolean },
+      file: string | undefined,
+      options: {
+        group: string
+        keys?: string
+        prefix?: string
+        dryRun?: boolean
+        overwrite?: boolean
+        fromStdin?: boolean
+      },
     ) => {
+      if (options.fromStdin && file) {
+        throw validationError(
+          'Cannot combine <file> with --from-stdin',
+          'Pass either a file path or --from-stdin, not both',
+        )
+      }
+      if (!options.fromStdin && !file) {
+        throw validationError('No JSON source provided', 'Pass a file path or use --from-stdin')
+      }
       const namespace = validateNamespace(await resolveRef(rawNamespace))
       const strategy = options.keys === 'leaf' ? 'leaf' : 'upper-snake'
       const result = await importJsonFile(namespace, file, {
@@ -155,6 +173,8 @@ program
         keys: strategy,
         prefix: options.prefix,
         dryRun: options.dryRun,
+        overwrite: options.overwrite,
+        fromStdin: options.fromStdin,
       })
       await storeRefs([namespace])
       if (options.dryRun) {

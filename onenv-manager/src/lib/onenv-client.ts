@@ -362,7 +362,7 @@ export async function listGroupEntries(namespace: string, group: string): Promis
     .sort((a, b) => a.path.localeCompare(b.path))
 }
 
-async function mapWithLimit<I, O>(
+export async function mapWithLimit<I, O>(
   items: I[],
   limit: number,
   fn: (i: I) => Promise<O>,
