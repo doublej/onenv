@@ -21,6 +21,7 @@ import { validationError } from './lib/errors.js'
 import { getNamespaceVarsWithMeta } from './lib/manager-service.js'
 import { ensureServiceAccountToken } from './lib/op-token.js'
 import { handleError, output, setJsonMode, success } from './lib/output.js'
+import { confirmMutation } from './lib/permission.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
 import { resolveRef, storeRefs } from './lib/ref-store.js'
 import type { NamespaceVar } from './lib/types.js'
@@ -121,6 +122,7 @@ program
     const namespace = validateNamespace(await resolveRef(rawNamespace))
     const safeKey = validateKey(key)
     const next = await readValueFromPrompt(namespace, safeKey)
+    await confirmMutation({ action: 'set', namespace, details: `key=${safeKey}` })
     await createOrUpdateVar(namespace, safeKey, next)
     await storeRefs([namespace])
     success(`Saved ${namespace}.${safeKey}`, { namespace, key: safeKey })
@@ -135,6 +137,7 @@ program
     const namespace = validateNamespace(await resolveRef(rawNamespace))
     const safeKey = validateKey(key)
     const next = await readValueFromPrompt(namespace, safeKey)
+    await confirmMutation({ action: 'edit', namespace, details: `key=${safeKey}` })
     await editVar(namespace, safeKey, next)
     await storeRefs([namespace])
     success(`Updated ${namespace}.${safeKey}`, { namespace, key: safeKey })
@@ -149,6 +152,11 @@ program
     requireKeys(keys, 'unset')
     const namespace = validateNamespace(await resolveRef(rawNamespace))
     const safeKeys = keys.map(validateKey)
+    await confirmMutation({
+      action: 'unset',
+      namespace,
+      details: `keys=${safeKeys.join(',')}`,
+    })
     for (const key of safeKeys) {
       await removeVar(namespace, key)
     }
@@ -208,6 +216,13 @@ program
     ) => {
       const namespace = validateNamespace(await resolveRef(rawNamespace))
       const strategy = options.keys === 'leaf' ? 'leaf' : 'upper-snake'
+      if (!options.dryRun) {
+        await confirmMutation({
+          action: 'import',
+          namespace,
+          details: `file=${file} group=${options.group ?? '(default)'}`,
+        })
+      }
       const result = await importJsonFile(namespace, file, {
         group: options.group,
         keys: strategy,
