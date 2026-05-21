@@ -1,66 +1,42 @@
 # onenv
 
-> 1Password-backed environment variable manager. Replaces `.env` files.
+> Stop committing `.env`. Stop pasting tokens in Slack. Put your environment
+> variables in 1Password and pretend nothing changed.
 
-Two pieces, sharing a 1Password vault:
+`onenv` is a small CLI that swaps `.env` files for items in a 1Password vault.
+You work the same way you always have — `KEY=value` reads from
+`process.env.KEY` — but the values live in your vault, you rotate them in one
+place, and you never check a secret into git again.
 
-- **`onenv-manager`** — CLI + interactive TUI for humans
-- **`onenv-api`** — local HTTP API for agents, with permission brokering
-
-Secrets live in a 1Password vault as `namespace/KEY` items. No plaintext on disk.
-
-## Features
-
-- **`.env` replacement** — `KEY=value` ergonomics, but values live in a 1Password vault; nothing on disk
-- **`onenv run -- <cmd>`** — fetches per-project secrets, injects as env vars, execs your command
-- **JSON file support** — `onenv import` flattens a JSON file (GCP service accounts, OAuth tokens, kubeconfigs) into per-leaf onenv keys; `onenv run --file group:VAR` materializes the rebuilt JSON to a `0600` tempfile and exposes its path; `onenv run --file-rw group:VAR` does the same but writes the file back to onenv if the child mutated it (OAuth refresh, rotation). Per-field rotation, no plaintext JSON on disk.
-- **`onenv build-file`** — reassemble the original JSON shape from stored leaves (with type preservation: numbers stay numbers, empty containers round-trip)
-- **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
-- **Disable without deleting** — `onenv disable <key>` keeps the secret in 1Password but excludes it from `run`/`export`; `enable` restores it
-- **Interactive TUI** — `@clack/prompts`-based menu for browsing/editing without typing commands
-- **Agent HTTP API** — `onenv-api` exposes the same surface over HTTP, gating every mutation behind a macOS AppleScript desktop dialog
-- **Agent primer** — `onenv prime` emits a complete spec (commands, errors, state files, HTTP endpoints) as XML or JSON for dropping into agent context
-- **`@`-refs** — positional shorthand against the last namespace list (`@1`, `@2`, `@last`) for fast repeat work
-- **Service-account ready** — `OP_SERVICE_ACCOUNT_TOKEN` accepts a literal `ops_eyJ...` token *or* an `op://...` reference; resolved once and cached at `~/.config/onenv-manager/op-token` (mode 0600), self-heals on auth failure
-- **Grouped listing** — `onenv list <ns> --groups` buckets keys by their reassembly group, with `(ungrouped)` for flat secrets
-- **JSON output** — every command emits machine-readable JSON when piped or with `--json`; structured error envelope with codes, categories, retryable flag
-- **Audit + rotation** — 1Password tracks every read; rotate by overwriting the item — no redeploy
-
-## Why
-
-`.env` files leak. They sit unencrypted next to source, drift between machines, get pasted into chat, end up in `git status` more often than they should, and nobody ever rotates the keys. Sharing them means Slack DMs and stale copies on three laptops.
-
-onenv keeps the same `KEY=value` ergonomics but the values live in your 1Password vault:
-
-- **Nothing on disk** — `onenv run` injects secrets at process start; they exist in env memory only
-- **Real auth** — biometric unlock or a scoped service account, not a chmod 600 hope
-- **Audit + rotate** — 1Password tracks every read; rotate by overwriting the item
-- **Agent-safe** — the HTTP API gates every mutation behind a macOS AppleScript desktop dialog
-- **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
-
-## How it works
-
-```
-   ┌─ onenv-manager (CLI/TUI) ─┐
-   │                           │
-   │   onenv set / list / run  │──┐
-   │                           │  │
-   └───────────────────────────┘  │     ┌──────────────┐     ┌───────────────┐
-                                  ├──▶  │   op CLI     │ ──▶ │  1Password    │
-   ┌─ onenv-api (HTTP, :4317) ─┐  │     │ (biometric / │     │     vault     │
-   │                           │  │     │  service-acct│     │   "onenv"     │
-   │   POST /v1/vars/set       │──┘     └──────────────┘     └───────────────┘
-   │   ↳ desktop dialog        │             ▲
-   │     (AppleScript)         │             │
-   └───────────────────────────┘             │
-                                  reads `namespace/KEY` items
-                                  tagged `onenv:<ns>`, field
-                                  `credential` = value
+```bash
+onenv set aws AWS_ACCESS_KEY_ID         # masked prompt, value lands in 1Password
+onenv run -- node app.js                # injects every secret your project needs, then execs
+onenv check                             # diff your shell against the vault — no values printed
 ```
 
-Items are tagged `onenv:<namespace>` — the prefix marks ownership and is what the CLI filters on, so the vault can also hold items unrelated to onenv without conflict. State (which keys are disabled) lives at `~/.config/onenv-manager/state.json`. Everything else is in 1Password.
+## Why you might want it
 
-## Quickstart
+`.env` files were a fine idea ten years ago. Today they sit unencrypted next
+to source, drift between three of your laptops, get pasted into chat when you
+onboard a new teammate, and nobody ever rotates them.
+
+onenv keeps the `KEY=value` ergonomics — your app code does not change. But
+the values live in 1Password:
+
+- **Nothing on disk.** `onenv run` injects secrets into a child process's env
+  and they vanish when it exits.
+- **Real auth.** Touch ID for you, a scoped service account for CI.
+- **Audited.** 1Password tracks every read. Rotate by overwriting the item; no
+  redeploy, no edits to a `.env` file on your colleague's laptop.
+- **Per-project scope.** A `.onenv.json` checked into each project declares
+  which namespaces it pulls. Your frontend never sees backend keys.
+- **Agent-friendly.** Run `onenv prime` and pipe the output into your LLM's
+  context — it gets every command, flag, error code, and state file in one
+  shot, so it stops guessing.
+
+## Install
+
+You need [Bun](https://bun.sh), the [1Password CLI](https://developer.1password.com/docs/cli/), and the 1Password desktop app for biometric unlock.
 
 ```bash
 brew install 1password-cli bun
@@ -68,81 +44,87 @@ op signin
 op vault create onenv
 
 git clone https://github.com/doublej/onenv && cd onenv
-bun install.ts            # interactive setup wizard
+bun install.ts          # interactive setup — builds the CLI, links it, optionally imports your .env files
 ```
 
-Then in any project:
+After the installer finishes, `onenv` is on your PATH.
+
+## A 60-second tour
 
 ```bash
-onenv init                # creates .onenv.json
+# Add a secret. Masked prompt — value never enters shell history.
 onenv set aws AWS_ACCESS_KEY_ID
-onenv run -- node app.js  # injects secrets, runs your command
+onenv set aws AWS_SECRET_ACCESS_KEY
+
+# Tell this project which namespaces it uses. Writes .onenv.json — commit it.
+cd my-app
+onenv init
+
+# Run anything with the secrets injected. No `source .env`, no leaks.
+onenv run -- node app.js
+onenv run -- python manage.py migrate
+onenv run -- bun start
+
+# Migrating from another secret store? Pipe the value in — no shell history.
+op read "op://Private/aws/credential" | onenv set aws AWS_SECRET_ACCESS_KEY --value-stdin
+pbpaste                                | onenv set stripe STRIPE_SECRET_KEY --value-stdin
+
+# Did your laptop's exported env drift from the vault? Find out without leaking values.
+onenv check
+onenv get aws AWS_SECRET_ACCESS_KEY --fingerprint
+# sha256:f5a1e2...
+
+# Retiring a key? `disable` keeps it in 1Password (and recoverable);
+# `unset` deletes the item. unset refuses scripted use without --yes.
+onenv disable aws AWS_OLD_KEY
+onenv unset  aws AWS_OLD_KEY --yes
 ```
 
-## Demo
+## How it works
 
-```
-$ onenv list
-[
-  "aws",
-  "github",
-  "stripe"
-]
+```mermaid
+flowchart LR
+    user[You / your app / your CI]
+    cli["<b>onenv</b><br/><sub>CLI</sub>"]
+    op["<b>op</b><br/><sub>1Password CLI</sub>"]
+    vault[("<b>1Password</b><br/>vault &quot;onenv&quot;")]
 
-$ onenv list aws
-[
-  { "key": "AWS_ACCESS_KEY_ID",     "disabled": false },
-  { "key": "AWS_REGION",            "disabled": false },
-  { "key": "AWS_SECRET_ACCESS_KEY", "disabled": false },
-  { "key": "AWS_SESSION_TOKEN",     "disabled": true  }
-]
-
-$ onenv run -- node -e 'console.log(process.env.AWS_REGION)'
-eu-west-1
+    user -- "onenv run -- cmd" --> cli
+    cli -- "spawns" --> op
+    op  -- "biometric / service account" --> vault
+    vault -. "namespace/KEY items<br/>tagged onenv:&lt;ns&gt;" .-> op
+    op -. "values" .-> cli
+    cli -. "injected as env vars" .-> user
 ```
 
-Output is JSON by default (one shape per command — see `onenv prime`). For interactive browsing/editing, run `onenv tui`.
+Each secret is a 1Password item titled `namespace/KEY` (e.g. `aws/AWS_REGION`)
+tagged `onenv:<namespace>`. The `onenv:` tag prefix is how the CLI knows the
+item belongs to it, so your vault can hold other unrelated items without
+conflict. State (which keys you've disabled) lives at
+`~/.config/onenv-manager/state.json`. Everything else is in 1Password.
 
-`onenv prime` is a complete agent primer — every command with output shape, every error code with retryable flag, every state-file path, and every HTTP endpoint with request/response shape. XML by default, structured JSON with `--json` or when piped.
+## JSON files (GCP service accounts, OAuth tokens, kubeconfigs)
 
-## Usage
-
-```bash
-onenv prime                              # XML primer of the CLI + API surface
-onenv list                               # all namespaces / keys you have access to
-onenv list aws                           # keys in one namespace
-onenv list aws --groups                  # bucket keys by reassembly group
-onenv set <ns> <KEY>                     # add/overwrite (interactive prompt)
-onenv edit <ns> <KEY>                    # update existing (interactive prompt)
-onenv unset <ns> <KEY>                   # delete
-onenv disable <ns> <KEY>                 # hide without delete
-onenv enable <ns> <KEY>                  # restore
-onenv run -- <cmd>                       # run command with project secrets injected
-onenv run --file [ns/]group:VAR -- <cmd>      # also materialize a JSON file, expose its path as VAR
-onenv run --file-rw [ns/]group:VAR -- <cmd>   # same, but write back to onenv if child mutated it
-onenv import <ns> <file.json>            # flatten a JSON file into onenv keys
-onenv build-file <ns> --group <name>     # reassemble the JSON file from stored leaves
-onenv export <ns[,ns2]>                  # print enabled values as JSON
-onenv tui                                # interactive
-```
-
-### JSON files (service accounts, OAuth tokens, kubeconfigs)
-
-Some tools want a file path instead of env vars. Import the JSON once, store every leaf as a separate onenv key, and rebuild on demand:
+Some tools want a path to a JSON file, not env vars. Import the JSON once,
+store every leaf as a separate `onenv` key (so each one is individually
+auditable and rotatable), and rebuild on demand:
 
 ```bash
 onenv import google /tmp/sa.json --group sa     # one onenv key per JSON leaf
 onenv list google --groups                      # see the sa group's keys
 onenv build-file google --group sa              # rebuild the original JSON to stdout
 onenv run --file sa:GOOGLE_APPLICATION_CREDENTIALS -- python app.py
-# tempfile lives under XDG_RUNTIME_DIR with mode 0600, removed on child exit
+# tempfile lives under XDG_RUNTIME_DIR with mode 0600 and is removed on child exit
 ```
 
-Per-field rotation works the same as flat secrets. Empty containers and types (numbers, booleans, nulls) round-trip exactly.
+For files the child program mutates (OAuth tokens that self-refresh, rotating
+credentials), use `--file-rw` instead of `--file`. onenv hashes the
+materialized file before the child runs and re-imports it on clean exit only
+if the hash changed. Writeback is skipped on `SIGINT` / `SIGTERM` and on any
+read error, so a crashed child can't poison the vault.
 
-For files the child program mutates (OAuth tokens that self-refresh, rotating credentials), use `--file-rw` instead of `--file`. onenv hashes the materialized file before the child runs and re-imports it on clean exit only if the hash changed. Re-import preserves the same group; new leaves create new keys, removed leaves leave stale keys in place (run `onenv unset` to prune). Writeback is skipped on SIGINT/SIGTERM and on any read error, so a crashed child cannot poison the vault.
-
-When the same group name exists in multiple project namespaces (e.g. one `token` group per OAuth account), bare `group:VAR` is ambiguous and the command errors. Disambiguate with `namespace/group:VAR`:
+If the same group name lives in multiple project namespaces (e.g. one `token`
+group per OAuth account), disambiguate with `namespace/group:VAR`:
 
 ```bash
 onenv run \
@@ -151,52 +133,72 @@ onenv run \
   -- python3 mail_sync.py
 ```
 
-## Agent API
-
-For headless / agent use, run `onenv-api` and call it over HTTP. Mutations require human approval via a macOS AppleScript desktop dialog.
+## Common commands
 
 ```bash
-curl -H "x-onenv-token: $AGENT_API_TOKEN" \
-     http://127.0.0.1:4317/v1/namespaces
+onenv list                                # all namespaces in your vault
+onenv list aws                            # keys in one namespace
+onenv list aws --groups                   # bucket keys by reassembly group
+
+onenv set    <ns> <KEY>                   # interactive prompt
+onenv set    <ns> <KEY> --value-stdin     # read value from a pipe (no shell history)
+onenv edit   <ns> <KEY>                   # same, but errors if the key doesn't exist
+onenv get    <ns> <KEY>                   # print the value
+onenv get    <ns> <KEY> --fingerprint     # print sha256:<hex>, never the value
+onenv unset  <ns> <KEY> [--yes]           # delete (prompts in TTY, requires --yes otherwise)
+onenv disable <ns> <KEY>                  # hide from run/export without deleting
+onenv enable  <ns> <KEY>                  # restore
+
+onenv init                                # write .onenv.json for the current project
+onenv check                               # diff process.env against the vault (no values printed)
+onenv run    -- <cmd>                     # run cmd with project secrets injected
+onenv export <ns[,ns2]> -- <cmd>          # run cmd with the listed namespaces injected
+onenv export <ns[,ns2]>                   # print enabled values as JSON
+
+onenv import <ns> <file.json> --group <name>  # flatten a JSON file into onenv keys
+onenv import <ns> --group <name> --from-stdin # same, but read JSON from stdin
+onenv import <ns> <file.json> --group <name> --overwrite  # atomic replace (snapshot + rollback)
+onenv build-file <ns> --group <name>      # reassemble the JSON from stored leaves
+
+onenv prime                               # full agent primer (XML / Markdown / JSON)
+onenv tui                                 # interactive TUI
 ```
 
-| Method | Path                              | Auth | Permission |
-|--------|-----------------------------------|------|------------|
-| GET    | `/health`                         | No   | No         |
-| GET    | `/v1/namespaces`                  | Yes  | No         |
-| GET    | `/v1/namespaces/:namespace/vars`  | Yes  | No         |
-| POST   | `/v1/vars/{set,edit,unset}`       | Yes  | Yes        |
-| POST   | `/v1/vars/{disable,enable}`       | Yes  | Yes        |
-| POST   | `/v1/env/export`                  | Yes  | Yes        |
+`@1`, `@2`, `@last` work anywhere a namespace is expected — they index into
+the most recent list you saw.
 
-Full endpoint + body docs in [`onenv-api/README.md`](onenv-api/README.md).
+Pipe any command (or pass `--json`) and you get a machine-readable JSON
+shape, including a structured error envelope with codes, categories, and a
+retryable flag.
 
-## Avoiding biometric prompts
+## Running unattended (CI, daemons)
 
-By default `op` requires Touch ID for every secret read — fine for humans, painful for agents and CLI consumers. To run unattended, use a 1Password **service account**:
+Use a 1Password service account so `op` skips biometric unlock entirely.
 
 ```bash
 # 1Password web → Developer → Service Accounts → Create
-# Grant read+write on the `onenv` vault, then:
-
-OP_SERVICE_ACCOUNT_TOKEN=ops_eyJ...                    # literal
+# Grant read+write on the onenv vault, then either:
+export OP_SERVICE_ACCOUNT_TOKEN=ops_eyJ...                          # literal
 # or
-OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<id>/credential # resolved on first use
+export OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<id>/credential       # 1Password reference
 ```
 
-Both `onenv-api` (resolves at boot) and the `onenv` CLI (resolves on first command, caches the literal at `~/.config/onenv-manager/op-token` mode 0600) accept either form. After the first resolution all subsequent calls are silent.
+Either form works. The reference variant resolves on first use and caches
+the literal at `~/.config/onenv-manager/op-token` (mode 0600); rotating
+the token self-invalidates the cache.
 
-Tradeoff: token compromise = vault compromise. Keep the `onenv` vault scoped to non-personal secrets. Full guide: [`docs/guides/service-account-setup.md`](docs/guides/service-account-setup.md).
+Full setup: [`docs/guides/service-account-setup.md`](docs/guides/service-account-setup.md).
+CI patterns: [`docs/guides/ci-and-deploys.md`](docs/guides/ci-and-deploys.md).
 
 ## Docs
 
-- [Install guide](INSTALL.md) — full setup, env vars, dependencies
-- [Guides](docs/guides/) — migrating from `.env`, per-project setup, CI use, service accounts, rotation, multi-env
-- [`docs/CLAUDE-onenv.md`](docs/CLAUDE-onenv.md) — drop-in CLAUDE.md include for projects using onenv
+- [Install guide](INSTALL.md) — full setup, env vars, prerequisites
+- [Guides](docs/guides/) — migrating from `.env`, per-project setup, CI, service accounts, rotation, multi-env
+- [`docs/CLAUDE-onenv.md`](docs/CLAUDE-onenv.md) — drop-in `CLAUDE.md` snippet for projects that use onenv
 
 ## Stack
 
-TypeScript, Bun, Biome, Vitest. Strict TS. Co-located tests.
+TypeScript, Bun, Commander, @clack/prompts, Biome, Vitest.
 
 ## License
 
