@@ -3,19 +3,19 @@ import { spawn } from 'node:child_process'
 import * as p from '@clack/prompts'
 import { Command } from 'commander'
 import { buildFile } from './commands/build-file.js'
+import { registerEditCommand } from './commands/edit.js'
 import { importJsonFile } from './commands/import.js'
 import { printPrime } from './commands/prime.js'
 import { bindChildCleanup, prepareFileInjections } from './commands/run-files.js'
+import { registerSetCommand } from './commands/set.js'
 import { runTui } from './commands/tui.js'
+import { registerUnsetCommand } from './commands/unset.js'
 import {
-  createOrUpdateVar,
   disableVar,
-  editVar,
   enableVar,
   exportEnabledValues,
   getNamespaces,
   getNamespaceVars,
-  removeVar,
 } from './index.js'
 import { validationError } from './lib/errors.js'
 import { getNamespaceVarsWithMeta } from './lib/manager-service.js'
@@ -40,24 +40,6 @@ function requireKeys(keys: string[], command: string): void {
       `Provide key names as arguments: onenv ${command} <namespace> <key...>`,
     )
   }
-}
-
-function assertValue(input: unknown): string {
-  if (typeof input !== 'string' || p.isCancel(input) || input.length === 0) {
-    throw validationError('Value is required')
-  }
-  return input
-}
-
-async function readValueFromPrompt(namespace: string, key: string): Promise<string> {
-  const value = await p.password({
-    message: `${namespace}.${key} value`,
-    mask: '•',
-    validate(candidate) {
-      return candidate && candidate.length > 0 ? undefined : 'Value is required'
-    },
-  })
-  return assertValue(value)
 }
 
 function argsAfterDoubleDash(): string[] | null {
@@ -112,49 +94,9 @@ function groupVars(vars: NamespaceVar[]): Record<string, NamespaceVar[]> {
   return buckets
 }
 
-program
-  .command('set')
-  .description('Create or update a variable')
-  .argument('<namespace>', 'Namespace (supports @refs)')
-  .argument('<key>', 'Variable name')
-  .action(async (rawNamespace: string, key: string) => {
-    const namespace = validateNamespace(await resolveRef(rawNamespace))
-    const safeKey = validateKey(key)
-    const next = await readValueFromPrompt(namespace, safeKey)
-    await createOrUpdateVar(namespace, safeKey, next)
-    await storeRefs([namespace])
-    success(`Saved ${namespace}.${safeKey}`, { namespace, key: safeKey })
-  })
-
-program
-  .command('edit')
-  .description('Edit an existing variable value')
-  .argument('<namespace>', 'Namespace (supports @refs)')
-  .argument('<key>', 'Variable name')
-  .action(async (rawNamespace: string, key: string) => {
-    const namespace = validateNamespace(await resolveRef(rawNamespace))
-    const safeKey = validateKey(key)
-    const next = await readValueFromPrompt(namespace, safeKey)
-    await editVar(namespace, safeKey, next)
-    await storeRefs([namespace])
-    success(`Updated ${namespace}.${safeKey}`, { namespace, key: safeKey })
-  })
-
-program
-  .command('unset')
-  .description('Delete one or more variables from 1Password')
-  .argument('<namespace>', 'Namespace (supports @refs)')
-  .argument('<keys...>', 'Variable names to remove')
-  .action(async (rawNamespace: string, keys: string[]) => {
-    requireKeys(keys, 'unset')
-    const namespace = validateNamespace(await resolveRef(rawNamespace))
-    const safeKeys = keys.map(validateKey)
-    for (const key of safeKeys) {
-      await removeVar(namespace, key)
-    }
-    await storeRefs([namespace])
-    success(`Unset ${safeKeys.length} variable(s) in ${namespace}`, { namespace, keys: safeKeys })
-  })
+registerSetCommand(program)
+registerEditCommand(program)
+registerUnsetCommand(program)
 
 program
   .command('disable')
