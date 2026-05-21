@@ -4,6 +4,7 @@ import * as p from '@clack/prompts'
 import { Command } from 'commander'
 import { buildFile } from './commands/build-file.js'
 import { registerEditCommand } from './commands/edit.js'
+import { registerGetCommand } from './commands/get.js'
 import { importJsonFile } from './commands/import.js'
 import { printPrime } from './commands/prime.js'
 import { bindChildCleanup, prepareFileInjections } from './commands/run-files.js'
@@ -94,6 +95,7 @@ function groupVars(vars: NamespaceVar[]): Record<string, NamespaceVar[]> {
   return buckets
 }
 
+registerGetCommand(program)
 registerSetCommand(program)
 registerEditCommand(program)
 registerUnsetCommand(program)
