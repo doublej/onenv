@@ -200,11 +200,6 @@ function parseInject(output: string, sep: string, keys: string[]): Record<string
   return result
 }
 
-function expiresIn90Days(): string {
-  const date = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-  return date.toISOString().slice(0, 10)
-}
-
 interface OpField {
   id: string
   type: string
@@ -263,13 +258,11 @@ export async function setValueWithMeta(
   meta: ItemMeta,
 ): Promise<void> {
   const title = `${namespace}/${key}`
-  const expires = expiresIn90Days()
   const check = await execOp(['item', 'get', title, '--vault', ONENV_VAULT, '--format', 'json'])
 
   if (check.code === 0) {
     const item = JSON.parse(check.stdout) as OpItemDetail
     upsertField(item, 'credential', 'CONCEALED', value)
-    upsertField(item, 'expires', 'DATE', expires)
     applyMetaFields(item, meta)
     item.tags = [tagFor(namespace)]
     await withTemplateFile(JSON.stringify(item), (file) =>
@@ -282,10 +275,7 @@ export async function setValueWithMeta(
     title,
     vault: { name: ONENV_VAULT },
     tags: [tagFor(namespace)],
-    fields: [
-      { id: 'credential', type: 'CONCEALED', value, label: 'credential' },
-      { id: 'expires', type: 'DATE', value: expires, label: 'expires' },
-    ],
+    fields: [{ id: 'credential', type: 'CONCEALED', value, label: 'credential' }],
   }
   applyMetaFields(template, meta)
   // op 2.24+ silently ignores stdin templates ('-') passed via Node spawn pipes
