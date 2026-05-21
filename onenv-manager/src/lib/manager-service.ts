@@ -1,3 +1,4 @@
+import { validationError } from './errors.js'
 import {
   type GroupEntry,
   type ItemMeta,
@@ -106,15 +107,53 @@ export async function listGroupsForNamespace(namespace: string): Promise<string[
 }
 
 export async function exportEnabledValues(namespaces: string[]): Promise<Record<string, string>> {
-  const disabledMap = await getDisabledMap()
+  const perNamespace = await fetchEnabledPerNamespace(namespaces)
+  return Object.fromEntries(perNamespace.flatMap(({ entries }) => entries))
+}
 
-  const perNamespace = await Promise.all(
-    namespaces.map(async (namespace) => {
-      const values = await listValues(namespace)
-      const disabled = new Set(disabledMap[namespace] ?? [])
-      return Object.entries(values).filter(([key]) => !disabled.has(key))
+export async function exportEnabledValuesStrict(
+  namespaces: string[],
+): Promise<Record<string, string>> {
+  const perNamespace = await fetchEnabledPerNamespace(namespaces)
+  const owners = collectKeyOwners(perNamespace)
+  const conflicts = [...owners.entries()]
+    .filter(([, ns]) => ns.length > 1)
+    .sort(([a], [b]) => a.localeCompare(b))
+  if (conflicts.length > 0) {
+    const lines = conflicts.map(([k, ns]) => `  ${k}: ${ns.join(', ')}`).join('\n')
+    throw validationError(
+      `Key collisions across namespaces:\n${lines}`,
+      'Remove the duplicate from one namespace, or disable it: onenv disable <ns> <key>',
+    )
+  }
+  return Object.fromEntries(perNamespace.flatMap(({ entries }) => entries))
+}
+
+interface NamespaceEntries {
+  ns: string
+  entries: Array<[string, string]>
+}
+
+async function fetchEnabledPerNamespace(namespaces: string[]): Promise<NamespaceEntries[]> {
+  const disabledMap = await getDisabledMap()
+  return await Promise.all(
+    namespaces.map(async (ns) => {
+      const values = await listValues(ns)
+      const disabled = new Set(disabledMap[ns] ?? [])
+      const entries = Object.entries(values).filter(([key]) => !disabled.has(key))
+      return { ns, entries }
     }),
   )
+}
 
-  return Object.fromEntries(perNamespace.flat())
+function collectKeyOwners(perNamespace: NamespaceEntries[]): Map<string, string[]> {
+  const owners = new Map<string, string[]>()
+  for (const { ns, entries } of perNamespace) {
+    for (const [k] of entries) {
+      const arr = owners.get(k) ?? []
+      arr.push(ns)
+      owners.set(k, arr)
+    }
+  }
+  return owners
 }

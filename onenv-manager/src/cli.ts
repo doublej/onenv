@@ -13,7 +13,7 @@ import { registerUnsetCommand } from './commands/unset.js'
 import {
   disableVar,
   enableVar,
-  exportEnabledValues,
+  exportEnabledValuesStrict,
   getNamespaces,
   getNamespaceVars,
 } from './index.js'
@@ -255,7 +255,7 @@ program
   .allowExcessArguments(true)
   .action(async (_commandArgs: string[], options: { file: string[]; fileRw: string[] }) => {
     const config = await readProjectConfig()
-    const values = await exportEnabledValues(config.namespaces)
+    const values = await exportEnabledValuesStrict(config.namespaces)
     const cmd = argsAfterDoubleDash()
     if (!cmd || cmd.length === 0) {
       throw validationError('No command provided after --', 'onenv run -- node app.js')
@@ -292,7 +292,7 @@ program
     }
     const namespaces = (await Promise.all(parts.map(resolveRef))).map(validateNamespace)
     await storeRefs(namespaces)
-    const values = await exportEnabledValues(namespaces)
+    const values = await exportEnabledValuesStrict(namespaces)
     const cmd = argsAfterDoubleDash()
 
     if (!cmd) {

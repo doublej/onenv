@@ -5,6 +5,7 @@ export {
   editVar,
   enableVar,
   exportEnabledValues,
+  exportEnabledValuesStrict,
   getNamespaces,
   getNamespaceVars,
   getNamespaceVarsWithValues,
