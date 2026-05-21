@@ -14,14 +14,39 @@
         'Reads your project’s .onenv.json, fetches enabled secrets, injects them as env vars, execs the command. Process exits, secrets disappear.',
     },
     {
+      title: 'Pipeable writes — new in 0.6',
+      description:
+        'onenv set <ns> <KEY> --value-stdin reads the secret from a pipe instead of an interactive prompt. Chain with op read, pbpaste, or aws ssm get-parameter to move secrets between stores without ever touching shell history.',
+    },
+    {
+      title: 'Drift detection — new in 0.6',
+      description:
+        'onenv check compares process.env against the project’s onenv-stored secrets via SHA-256 fingerprints. Reports match / differ / missing / shell-only and exits non-zero on drift. Never prints a value.',
+    },
+    {
+      title: 'Safe comparison — new in 0.6',
+      description:
+        'onenv get <ns> <KEY> --fingerprint returns sha256:<hex>. Diff two environments, confirm a rotation reached prod, or verify a teammate has the same secret — without ever materializing the value.',
+    },
+    {
+      title: 'Atomic bulk import — new in 0.6',
+      description:
+        'onenv import --overwrite snapshots every key it would touch, writes the new payload, and rolls back the entire batch if any single write fails. Either every key lands at the new value or nothing changes.',
+    },
+    {
       title: 'JSON file workflow',
       description:
-        'onenv import flattens GCP service accounts, OAuth tokens, kubeconfigs into per-leaf 1Password items. onenv run --file group:VAR materializes the rebuilt JSON to a 0600 tempfile and exposes its path.',
+        'onenv import flattens GCP service accounts, OAuth tokens, kubeconfigs into per-leaf 1Password items. onenv run --file group:VAR materializes the rebuilt JSON to a 0600 tempfile and exposes its path. Add --from-stdin to import without writing the JSON to disk first.',
     },
     {
       title: 'Per-project namespaces',
       description:
-        '.onenv.json declares which namespaces a project pulls. No global blast radius — a frontend project never sees backend keys it shouldn’t.',
+        '.onenv.json declares which namespaces a project pulls. No global blast radius — a frontend project never sees backend keys it shouldn’t. Cross-namespace key collisions are a hard error, not silent last-write-wins.',
+    },
+    {
+      title: 'Confirmation guardrails — new in 0.6',
+      description:
+        'Set ONENV_CONFIRM_MUTATIONS=1 to require a macOS approval dialog before any write. onenv unset additionally refuses to delete from a non-TTY context unless --yes is passed.',
     },
     {
       title: 'Disable without deleting',
@@ -36,12 +61,7 @@
     {
       title: 'Agent primer',
       description:
-        'onenv prime emits the full CLI + API spec — every command shape, every error code, every state file, every endpoint — as XML or JSON. Drop straight into agent context.',
-    },
-    {
-      title: '@-refs',
-      description:
-        'Positional shorthand against the last namespace list — @1, @2, @last. Fast repeat work without retyping long names.',
+        'onenv prime emits the full CLI spec — every command shape, every flag, every error code, every state file — as XML, Markdown, or JSON. Drop straight into agent context.',
     },
     {
       title: 'Service-account ready',
@@ -49,19 +69,14 @@
         'OP_SERVICE_ACCOUNT_TOKEN accepts a literal token or an op:// reference. First call resolves and caches at ~/.config/onenv-manager/op-token (mode 0600). Subsequent calls are silent. Self-heals on auth failure.',
     },
     {
-      title: 'Grouped listings',
+      title: '@-refs',
       description:
-        'onenv list <ns> --groups buckets keys by their reassembly group, with (ungrouped) for flat secrets. Lets you see at a glance which keys belong to an imported JSON file.',
+        'Positional shorthand against the last namespace list — @1, @2, @last. Fast repeat work without retyping long names.',
     },
     {
       title: 'JSON output',
       description:
         'Every command emits machine-readable JSON when piped or with --json. Errors return a structured envelope with code, category, retryable flag, hint, suggestion.',
-    },
-    {
-      title: 'Audit + rotation',
-      description:
-        '1Password tracks every read. Rotate by overwriting the item — no redeploy, no env file edits, no shipping new tokens to teammates.',
     },
   ];
 
@@ -87,6 +102,16 @@
       code: 'onenv run -- node app.js',
     },
     {
+      title: 'Pipe values in without shell history',
+      description: 'New in 0.6: --value-stdin reads the secret from a pipe so it never appears in your shell history or process list. Great for migrating from another secret store.',
+      code: 'op read "op://Private/AWS/credential" | onenv set aws AWS_SECRET_ACCESS_KEY --value-stdin\npbpaste | onenv edit cloudflare CLOUDFLARE_API_TOKEN --value-stdin',
+    },
+    {
+      title: 'Check for drift before you run',
+      description: 'New in 0.6: onenv check compares the current shell environment against the project’s stored secrets via SHA-256. Exits non-zero on mismatch — drop it in a precommit hook or shell prompt without leaking values.',
+      code: 'onenv check\nonenv get aws AWS_SECRET_ACCESS_KEY --fingerprint\n# sha256:f5a1...',
+    },
+    {
       title: 'Materialize a JSON file',
       description: 'For tools that want a path instead of env vars (GCP, kubeconfigs, OAuth). Tempfile lives under XDG_RUNTIME_DIR with mode 0600 and is removed on child exit / SIGINT / SIGTERM.',
       code: 'onenv import google /tmp/sa.json --group sa\nonenv run --file sa:GOOGLE_APPLICATION_CREDENTIALS -- python app.py',
@@ -109,7 +134,7 @@
   <div class="container">
     <h1>onenv</h1>
     <p class="description">
-      A 1Password-backed environment variable manager. Replaces <code>.env</code> files with per-key 1Password items, a CLI for humans, and an HTTP API for agents with permission brokering.
+      A 1Password-backed environment variable manager. Replaces <code>.env</code> files with per-key 1Password items, a scriptable CLI built for agents and humans, and an HTTP API for remote workers with permission brokering.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub</a>
