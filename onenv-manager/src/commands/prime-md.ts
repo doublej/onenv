@@ -1,9 +1,9 @@
 import type {
-  ApiSection,
   CommandSpec,
   ErrorsSection,
   NamingSection,
   OutputContract,
+  PermissionSection,
   PrimerData,
   RefsSection,
   SetupSection,
@@ -20,7 +20,7 @@ export function renderMarkdown(data: PrimerData): string {
     renderWorkflow(data.workflow),
     renderErrors(data.errors),
     renderOutputContract(data.output_contract),
-    renderApi(data.api),
+    renderPermission(data.permission),
   ]
   return `${sections.join('\n\n')}\n`
 }
@@ -139,45 +139,13 @@ function renderOutputContract(c: OutputContract): string {
   ].join('\n')
 }
 
-function renderApi(api: ApiSection): string {
+function renderPermission(perm: PermissionSection): string {
   return [
-    '## API',
-    api.description,
-    `URL: ${api.default_url} (default)`,
-    `Auth: ${api.auth}`,
-    `Audit: ${api.audit_header}`,
-    `Rate limit: ${api.rate_limit}`,
-    '### Config env',
-    renderApiEnv(api),
-    '### Endpoints',
-    renderApiEndpoints(api),
-    '### Errors',
-    renderApiErrors(api),
-  ].join('\n\n')
-}
-
-function renderApiEnv(api: ApiSection): string {
-  return api.config_env
-    .map((e) => {
-      const flags = [e.required ? 'required' : 'optional']
-      if (e.default !== undefined) flags.push(`default ${e.default}`)
-      return `- \`${e.name}\` (${flags.join(', ')}) — ${e.description}`
-    })
-    .join('\n')
-}
-
-function renderApiEndpoints(api: ApiSection): string {
-  return api.endpoints
-    .map((e) => {
-      const parts = [`\`${e.method} ${e.path}\``, `[${e.permission}]`]
-      if (e.body) parts.push(`body: ${e.body}`)
-      parts.push(`→ ${e.response}`)
-      const line = `- ${parts.join('  ')}`
-      return e.notes ? `${line}\n  - notes: ${e.notes}` : line
-    })
-    .join('\n')
-}
-
-function renderApiErrors(api: ApiSection): string {
-  return api.error_responses.map((e) => `- ${e.status} \`${e.body}\` — ${e.when}`).join('\n')
+    '## Confirm-on-write (opt-in)',
+    perm.description,
+    `- Trigger: \`${perm.trigger_env}\``,
+    `- Timeout: \`${perm.timeout_env}\``,
+    `- Gated commands: ${perm.gated_commands.map((c) => `\`${c}\``).join(', ')}`,
+    `- On deny / timeout: ${perm.error_code}`,
+  ].join('\n')
 }
