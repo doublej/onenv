@@ -29,8 +29,6 @@ Use for: debug and one-off namespace selection. Prefer `run` when a project has 
 
 Best: `onenv run --` from parent shell, read via `process.env.MY_KEY`. Don't shell out to `onenv export` from app code.
 
-If must, use HTTP API (`onenv-api`) — see [`agent-api.md`](agent-api.md).
-
 ## Disabled keys
 
 `onenv run` and `onenv export` skip disabled keys. Re-enable with `onenv enable`.

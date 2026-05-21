@@ -51,13 +51,6 @@ Pass the SA token via:
 
 Never bake the token into the image. Don't commit it to a Helm chart.
 
-## Server daemons (launchd / systemd)
-
-For `onenv-api` running as a long-lived service:
-
-- macOS: see `docs/examples/onenv-api.plist`.
-- Linux: drop-in unit file with `Environment="OP_SERVICE_ACCOUNT_TOKEN=..."` or `EnvironmentFile=/etc/onenv-api.env` (root-only mode 0600).
-
 ## Best practices
 
 - Scope the SA narrowly: read-only if the runner only consumes secrets; write only for rotation jobs.

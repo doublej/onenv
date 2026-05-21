@@ -2,12 +2,7 @@
 
 > 1Password-backed environment variable manager. Replaces `.env` files.
 
-Two pieces, sharing a 1Password vault:
-
-- **`onenv-manager`** — CLI + interactive TUI for humans
-- **`onenv-api`** — local HTTP API for agents, with permission brokering
-
-Secrets live in a 1Password vault as `namespace/KEY` items. No plaintext on disk.
+Single CLI binary, one 1Password vault. Secrets live as `namespace/KEY` items. No plaintext on disk.
 
 ## Features
 
@@ -18,8 +13,8 @@ Secrets live in a 1Password vault as `namespace/KEY` items. No plaintext on disk
 - **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
 - **Disable without deleting** — `onenv disable <key>` keeps the secret in 1Password but excludes it from `run`/`export`; `enable` restores it
 - **Interactive TUI** — `@clack/prompts`-based menu for browsing/editing without typing commands
-- **Agent HTTP API** — `onenv-api` exposes the same surface over HTTP, gating every mutation behind a macOS AppleScript desktop dialog
-- **Agent primer** — `onenv prime` emits a complete spec (commands, errors, state files, HTTP endpoints) as XML or JSON for dropping into agent context
+- **Optional macOS permission gate** — set `ONENV_CONFIRM_MUTATIONS=1` and `set` / `edit` / `unset` / `import` prompt a desktop AppleScript dialog before writing
+- **Agent primer** — `onenv prime` emits a complete spec (commands, errors, state files) as XML, Markdown, or JSON for dropping into agent context
 - **`@`-refs** — positional shorthand against the last namespace list (`@1`, `@2`, `@last`) for fast repeat work
 - **Service-account ready** — `OP_SERVICE_ACCOUNT_TOKEN` accepts a literal `ops_eyJ...` token *or* an `op://...` reference; resolved once and cached at `~/.config/onenv-manager/op-token` (mode 0600), self-heals on auth failure
 - **Grouped listing** — `onenv list <ns> --groups` buckets keys by their reassembly group, with `(ungrouped)` for flat secrets
@@ -35,24 +30,19 @@ onenv keeps the same `KEY=value` ergonomics but the values live in your 1Passwor
 - **Nothing on disk** — `onenv run` injects secrets at process start; they exist in env memory only
 - **Real auth** — biometric unlock or a scoped service account, not a chmod 600 hope
 - **Audit + rotate** — 1Password tracks every read; rotate by overwriting the item
-- **Agent-safe** — the HTTP API gates every mutation behind a macOS AppleScript desktop dialog
 - **Per-project namespaces** — `.onenv.json` declares which namespaces a project uses; no global blast radius
 
 ## How it works
 
 ```
-   ┌─ onenv-manager (CLI/TUI) ─┐
-   │                           │
-   │   onenv set / list / run  │──┐
-   │                           │  │
-   └───────────────────────────┘  │     ┌──────────────┐     ┌───────────────┐
-                                  ├──▶  │   op CLI     │ ──▶ │  1Password    │
-   ┌─ onenv-api (HTTP, :4317) ─┐  │     │ (biometric / │     │     vault     │
-   │                           │  │     │  service-acct│     │   "onenv"     │
-   │   POST /v1/vars/set       │──┘     └──────────────┘     └───────────────┘
-   │   ↳ desktop dialog        │             ▲
-   │     (AppleScript)         │             │
-   └───────────────────────────┘             │
+   ┌─ onenv (CLI/TUI) ─────────┐
+   │                           │     ┌──────────────┐     ┌───────────────┐
+   │   onenv set / list / run  │──▶  │   op CLI     │ ──▶ │  1Password    │
+   │                           │     │ (biometric / │     │     vault     │
+   └───────────────────────────┘     │  service-acct│     │   "onenv"     │
+                                     └──────────────┘     └───────────────┘
+                                             ▲
+                                             │
                                   reads `namespace/KEY` items
                                   tagged `onenv:<ns>`, field
                                   `credential` = value
@@ -103,12 +93,12 @@ eu-west-1
 
 Output is JSON by default (one shape per command — see `onenv prime`). For interactive browsing/editing, run `onenv tui`.
 
-`onenv prime` is a complete agent primer — every command with output shape, every error code with retryable flag, every state-file path, and every HTTP endpoint with request/response shape. XML by default, structured JSON with `--json` or when piped.
+`onenv prime` is a complete agent primer — every command with output shape, every error code with retryable flag, every state-file path. XML on a TTY, Markdown when piped, structured JSON with `--json`.
 
 ## Usage
 
 ```bash
-onenv prime                              # XML primer of the CLI + API surface
+onenv prime                              # XML primer of the CLI surface
 onenv list                               # all namespaces / keys you have access to
 onenv list aws                           # keys in one namespace
 onenv list aws --groups                  # bucket keys by reassembly group
@@ -151,25 +141,11 @@ onenv run \
   -- python3 mail_sync.py
 ```
 
-## Agent API
+## Confirm-on-write (optional)
 
-For headless / agent use, run `onenv-api` and call it over HTTP. Mutations require human approval via a macOS AppleScript desktop dialog.
+Set `ONENV_CONFIRM_MUTATIONS=1` and `set` / `edit` / `unset` / `import` will pop a macOS AppleScript dialog before writing to 1Password. Deny (or timeout — see `PERMISSION_TIMEOUT_MS`, default 120000ms) → the command throws `PERMISSION_DENIED` and nothing changes. Useful when handing the CLI to a long-running agent that should pause on every mutation.
 
-```bash
-curl -H "x-onenv-token: $AGENT_API_TOKEN" \
-     http://127.0.0.1:4317/v1/namespaces
-```
-
-| Method | Path                              | Auth | Permission |
-|--------|-----------------------------------|------|------------|
-| GET    | `/health`                         | No   | No         |
-| GET    | `/v1/namespaces`                  | Yes  | No         |
-| GET    | `/v1/namespaces/:namespace/vars`  | Yes  | No         |
-| POST   | `/v1/vars/{set,edit,unset}`       | Yes  | Yes        |
-| POST   | `/v1/vars/{disable,enable}`       | Yes  | Yes        |
-| POST   | `/v1/env/export`                  | Yes  | Yes        |
-
-Full endpoint + body docs in [`onenv-api/README.md`](onenv-api/README.md).
+The flag has no effect on read commands (`list`, `export`, `run`, `build-file`) or on local-only state changes (`disable`, `enable`).
 
 ## Avoiding biometric prompts
 
@@ -184,7 +160,7 @@ OP_SERVICE_ACCOUNT_TOKEN=ops_eyJ...                    # literal
 OP_SERVICE_ACCOUNT_TOKEN=op://Personal/<id>/credential # resolved on first use
 ```
 
-Both `onenv-api` (resolves at boot) and the `onenv` CLI (resolves on first command, caches the literal at `~/.config/onenv-manager/op-token` mode 0600) accept either form. After the first resolution all subsequent calls are silent.
+The `onenv` CLI resolves the reference on first command and caches the literal at `~/.config/onenv-manager/op-token` (mode 0600). After the first resolution all subsequent calls are silent.
 
 Tradeoff: token compromise = vault compromise. Keep the `onenv` vault scoped to non-personal secrets. Full guide: [`docs/guides/service-account-setup.md`](docs/guides/service-account-setup.md).
 

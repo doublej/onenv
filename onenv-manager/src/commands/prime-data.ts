@@ -1,4 +1,3 @@
-import { buildApi } from './prime-data-api.js'
 import { buildCommands, buildErrors, buildState } from './prime-data-cli.js'
 
 export interface PrimerData {
@@ -12,7 +11,7 @@ export interface PrimerData {
   state: StateEntry[]
   errors: ErrorsSection
   output_contract: OutputContract
-  api: ApiSection
+  permission: PermissionSection
 }
 
 export interface SetupSection {
@@ -74,44 +73,19 @@ export interface OutputContract {
   json_mode_trigger: string
 }
 
-export interface ApiEnv {
-  name: string
-  required: boolean
-  default?: string
+export interface PermissionSection {
   description: string
-}
-
-export interface ApiEndpoint {
-  method: string
-  path: string
-  permission: 'none' | 'required'
-  body?: string
-  response: string
-  notes?: string
-}
-
-export interface ApiErrorResponse {
-  status: number
-  body: string
-  when: string
-}
-
-export interface ApiSection {
-  description: string
-  default_url: string
-  auth: string
-  audit_header: string
-  rate_limit: string
-  config_env: ApiEnv[]
-  endpoints: ApiEndpoint[]
-  error_responses: ApiErrorResponse[]
+  trigger_env: string
+  timeout_env: string
+  gated_commands: string[]
+  error_code: string
 }
 
 export function buildPrimer(version: string): PrimerData {
   return {
     version,
     summary:
-      '1Password-backed secret management. CLI (onenv) for humans + scripts; HTTP API (onenv-api) for agents with permission brokering. All output is JSON when piped or --json is set.',
+      '1Password-backed secret management. Single CLI (onenv) for humans, scripts, and agents. All output is JSON when piped or --json is set. Set ONENV_CONFIRM_MUTATIONS=1 to gate writes behind a macOS desktop dialog.',
     setup: {
       description:
         'Authenticate via service account (headless) or interactive op signin. The CLI auto-resolves op:// references on first use.',
@@ -167,6 +141,17 @@ export function buildPrimer(version: string): PrimerData {
       json_mode_trigger:
         'Pass --json explicitly, OR run with stdout not a TTY (pipes, scripts, CI). Either triggers JSON mode globally.',
     },
-    api: buildApi(),
+    permission: buildPermission(),
+  }
+}
+
+function buildPermission(): PermissionSection {
+  return {
+    description:
+      'Opt-in confirm-on-write. When enabled, the listed commands display a macOS AppleScript dialog before mutating 1Password. Deny → the command throws PERMISSION_DENIED and nothing changes. macOS only; the CLI errors if the flag is set on any other platform. Useful when an agent or long-running script should pause on every write.',
+    trigger_env: 'ONENV_CONFIRM_MUTATIONS=1 (any other value, including unset, disables it)',
+    timeout_env: 'PERMISSION_TIMEOUT_MS (optional, default 120000ms; minimum 10s)',
+    gated_commands: ['set', 'edit', 'unset', 'import'],
+    error_code: 'PERMISSION_DENIED on deny / timeout (category: user_error, exit code 1)',
   }
 }

@@ -29,14 +29,14 @@
         'onenv disable hides a key from run/export but keeps it in 1Password. enable restores. State lives in ~/.config/onenv-manager/state.json.',
     },
     {
-      title: 'Agent HTTP API',
+      title: 'Confirm-on-write',
       description:
-        'onenv-api exposes the same surface over HTTP — every mutation gates behind a macOS AppleScript desktop dialog before executing.',
+        'Set ONENV_CONFIRM_MUTATIONS=1 and set / edit / unset / import pause on a macOS AppleScript dialog before writing. Deny → the command throws PERMISSION_DENIED and nothing changes.',
     },
     {
       title: 'Agent primer',
       description:
-        'onenv prime emits the full CLI + API spec — every command shape, every error code, every state file, every endpoint — as XML or JSON. Drop straight into agent context.',
+        'onenv prime emits the full CLI spec — every command shape, every error code, every state file — as XML, Markdown, or JSON. Drop straight into agent context.',
     },
     {
       title: '@-refs',
@@ -109,7 +109,7 @@
   <div class="container">
     <h1>onenv</h1>
     <p class="description">
-      A 1Password-backed environment variable manager. Replaces <code>.env</code> files with per-key 1Password items, a CLI for humans, and an HTTP API for agents with permission brokering.
+      A 1Password-backed environment variable manager. Replaces <code>.env</code> files with per-key 1Password items and a single CLI for humans and scripts.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub</a>
@@ -171,7 +171,7 @@
         <code>.env</code> files leak. They sit unencrypted next to source, drift between machines, get pasted into chat, end up in <code>git status</code> more often than they should, and nobody ever rotates the keys. Sharing them means Slack DMs and stale copies on three laptops.
       </p>
       <p>
-        onenv keeps the same <code>KEY=value</code> ergonomics, but the values live in your 1Password vault — biometric or service-account auth, full audit log, atomic rotation, and an HTTP-API surface that gates every mutation behind explicit human approval.
+        onenv keeps the same <code>KEY=value</code> ergonomics, but the values live in your 1Password vault — biometric or service-account auth, full audit log, atomic rotation, and an opt-in macOS dialog that gates every write behind explicit human approval.
       </p>
     </div>
   </section>
