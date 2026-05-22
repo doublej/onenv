@@ -4,14 +4,13 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Overview
 
-`onenv` is a single TypeScript CLI that manages secrets stored in 1Password via the `op` CLI. Source lives in `onenv-manager/` (the published binary is named `onenv`). `install.ts` at the repo root is an interactive setup wizard.
+`onenv` is a single TypeScript CLI that manages secrets stored in 1Password via the `op` CLI. Source lives at the repo root; the published binary is `onenv` (from `dist/cli.js`). `install.ts` at the repo root is an interactive setup wizard.
 
-The legacy `onenv-api/` HTTP server is being retired and should not be referenced in user-facing docs or new features. Code may still exist on disk pending removal — leave it alone unless explicitly asked.
+The legacy `onenv-api/` HTTP server was deleted in the 0.7 collapse — do not recreate it. Its only valuable surface, the macOS permission dialog, was ported into the CLI as the opt-in `ONENV_CONFIRM_MUTATIONS=1` guard.
 
 ## Commands
 
 ```bash
-cd onenv-manager
 just check          # loc-check + lint + typecheck + test (preferred)
 just lint-fix       # auto-fix lint/format
 just typecheck      # bunx tsc --noEmit

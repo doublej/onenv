@@ -18,7 +18,7 @@ jobs:
       - uses: 1password/install-cli-action@v1
       - uses: oven-sh/setup-bun@v2
 
-      - run: cd onenv-manager && bun install && bun run build && bun link
+      - run: bun install && bun run build && bun link
       - run: bun link onenv               # makes `onenv` available on PATH
 
       - name: Run with secrets

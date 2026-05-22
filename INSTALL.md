@@ -27,7 +27,6 @@ The wizard:
 If you'd rather do it by hand:
 
 ```bash
-cd onenv-manager
 bun install
 bun run build
 bun link               # makes `onenv` global

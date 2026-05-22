@@ -2,8 +2,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
 
 const ROOT = import.meta.dir
-const MANAGER = `${ROOT}/onenv-manager`
-const CLACK_PATH = `${MANAGER}/node_modules/@clack/prompts/dist/index.mjs`
+const CLACK_PATH = `${ROOT}/node_modules/@clack/prompts/dist/index.mjs`
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', '.nuxt', '__pycache__', '.venv', 'venv'])
 const ONENV_VAULT = 'onenv'
 const ONENV_CATEGORY = 'API Credential'
@@ -19,8 +18,8 @@ async function run(cmd: string[], cwd: string): Promise<void> {
 
 async function bootstrap(): Promise<void> {
   if (await Bun.file(CLACK_PATH).exists()) return
-  console.log('Installing manager dependencies (needed for installer UI)...')
-  await run(['bun', 'install'], MANAGER)
+  console.log('Installing dependencies (needed for installer UI)...')
+  await run(['bun', 'install'], ROOT)
   console.log('Done.\n')
 }
 
@@ -220,9 +219,9 @@ p.log.success('op CLI found')
 if (!Bun.which('just')) p.log.info('just not found — optional but recommended: brew install just')
 
 await ensureVault()
-await installDeps('onenv', MANAGER)
-await build('onenv', MANAGER)
-await spin('Linking onenv CLI', () => run(['bun', 'link'], MANAGER))
+await installDeps('onenv', ROOT)
+await build('onenv', ROOT)
+await spin('Linking onenv CLI', () => run(['bun', 'link'], ROOT))
 
 try {
   const proc = Bun.spawn(['onenv', 'list'], { stdout: 'ignore', stderr: 'ignore' })

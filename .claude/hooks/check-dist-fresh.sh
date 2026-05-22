@@ -14,7 +14,6 @@ if ! printf '%s' "$cmd" | grep -qE '(^|[^[:alnum:]_])git[[:space:]]+(commit|push
 fi
 
 repo="$(cd "$(dirname "$0")/../.." && pwd)"
-stale=()
 
 newest_src() {
   local dir="$1"
@@ -30,28 +29,17 @@ dist_mtime() {
   stat -f '%m' "$1"
 }
 
-check_pkg() {
-  local pkg="$1" dist_file="$2"
-  local src_t dist_t
-  src_t="$(newest_src "$repo/$pkg/src" || echo 0)"
-  dist_t="$(dist_mtime "$repo/$pkg/$dist_file")"
-  if [ "${src_t:-0}" -gt "${dist_t:-0}" ]; then
-    stale+=("$pkg")
-  fi
-}
-
-check_pkg onenv-manager dist/cli.js
-check_pkg onenv-api dist/index.js
-
-if [ "${#stale[@]}" -eq 0 ]; then
+src_t="$(newest_src "$repo/src" || echo 0)"
+dist_t="$(dist_mtime "$repo/dist/cli.js")"
+if [ "${src_t:-0}" -le "${dist_t:-0}" ]; then
   exit 0
 fi
 
 {
-  echo "Blocked: $(printf '%s, ' "${stale[@]}" | sed 's/, $//') has source newer than dist/."
+  echo "Blocked: src/ has changes newer than dist/cli.js."
   echo "Rebuild before committing or pushing:"
+  echo "  bun run build             # at the repo root"
   echo "  bun run install.ts        # full installer (rebuild + relink)"
-  echo "  bun run build             # per package, run inside onenv-manager/ or onenv-api/"
   echo
   echo "Globally linked 'onenv' binary points at dist/cli.js — stale dist ships old behavior."
 } >&2

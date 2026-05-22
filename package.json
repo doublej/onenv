@@ -1,7 +1,7 @@
 {
-  "name": "onenv-manager",
+  "name": "onenv",
   "version": "0.6.1",
-  "description": "A command-line tool",
+  "description": "1Password-backed environment variable manager. Replaces .env files.",
   "author": "Jurre-Jan Smit",
   "type": "module",
   "bin": {
