@@ -94,28 +94,29 @@ function renderCommands(commands: CommandSpec[]): string {
 }
 
 function groupCommands(commands: CommandSpec[]): { label: string; entries: CommandSpec[] }[] {
-  return [
-    { label: 'CORE', entries: commands.filter((c) => matchCategory(c.name, CORE_PREFIXES)) },
-    { label: 'RUN / EXPORT', entries: commands.filter((c) => matchCategory(c.name, RUN_PREFIXES)) },
-    {
-      label: 'GROUPED FILES',
-      entries: commands.filter((c) => matchCategory(c.name, FILE_PREFIXES)),
-    },
-    { label: 'OTHER', entries: commands.filter((c) => isOther(c.name)) },
+  const buckets = [
+    { label: 'CORE', prefixes: CORE_PREFIXES },
+    { label: 'RUN / EXPORT', prefixes: RUN_PREFIXES },
+    { label: 'GROUPED FILES', prefixes: FILE_PREFIXES },
+    { label: 'DIAGNOSTICS', prefixes: DIAGNOSTICS_PREFIXES },
   ]
+  const assigned = new Set<CommandSpec>()
+  const groups = buckets.map(({ label, prefixes }) => {
+    const entries = commands.filter((c) => matchCategory(c.name, prefixes))
+    for (const e of entries) assigned.add(e)
+    return { label, entries }
+  })
+  groups.push({ label: 'OTHER', entries: commands.filter((c) => !assigned.has(c)) })
+  return groups
 }
 
-const CORE_PREFIXES = ['set ', 'edit ', 'unset ', 'list', 'disable ', 'enable ', 'init']
+const CORE_PREFIXES = ['set ', 'edit ', 'get ', 'unset ', 'list', 'disable ', 'enable ', 'init']
 const RUN_PREFIXES = ['run ', 'export ']
 const FILE_PREFIXES = ['import ', 'build-file ']
-const OTHER_PREFIXES = ['tui', 'prime', 'onenv']
+const DIAGNOSTICS_PREFIXES = ['check', 'doctor', 'prime']
 
 function matchCategory(name: string, prefixes: string[]): boolean {
   return prefixes.some((p) => name === p.trim() || name.startsWith(p))
-}
-
-function isOther(name: string): boolean {
-  return matchCategory(name, OTHER_PREFIXES)
 }
 
 function formatCommand(c: CommandSpec): string {

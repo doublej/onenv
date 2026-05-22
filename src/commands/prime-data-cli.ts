@@ -30,9 +30,16 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'check',
       description:
-        'Preflight that compares process.env against the project\'s onenv namespaces (reads .onenv.json) and reports per-key whether the shell value matches, differs, or is missing. Never prints values — comparison is done via sha256 fingerprints internally. Use this before "onenv run" to spot drift between an already-loaded shell env and what onenv would inject.',
+        "Compare process.env against the project's onenv namespaces (reads .onenv.json) and report per-key whether the shell value matches, differs, or is missing. Never prints values — comparison is done via sha256 fingerprints internally. Use before `onenv run` to spot drift between an already-loaded shell env and what onenv would inject.",
       output:
         'JSON: {ok:true, keys:[{namespace,key,status:"match"|"differ"|"missing-in-shell"|"missing-in-onenv"}]}. TTY: grouped human summary.',
+    },
+    {
+      name: 'doctor',
+      description:
+        'Run health checks on the onenv environment and the current project: 1Password CLI availability and auth, vault reachability, project marker detection, .onenv.json presence and namespace existence. Exits 1 if any check has status `error`.',
+      output:
+        'TTY: human-readable grouped report. JSON: {cwd, project_marker, checks:[{name,status,detail,hint?}], summary:{ok,warn,error,skip}}.',
     },
     {
       name: 'list [ns] [--groups]',
