@@ -7,6 +7,7 @@ import { registerCheckCommand } from './commands/check.js'
 import { registerDoctorCommand } from './commands/doctor.js'
 import { registerEditCommand } from './commands/edit.js'
 import { registerGetCommand } from './commands/get.js'
+import { ROOT_HELP_EXAMPLES } from './commands/help-examples.js'
 import { registerImportCommand } from './commands/import.js'
 import { registerMigrateCommand } from './commands/migrate/index.js'
 import { printPrime } from './commands/prime.js'
@@ -41,6 +42,7 @@ const program = new Command()
   .description('Manage 1Password-backed variables with an interactive TUI and scriptable commands.')
   .option('--json', 'Force JSON output (default when piped)')
   .addHelpText('before', `${LOGO}\n`)
+  .addHelpText('after', ROOT_HELP_EXAMPLES)
 
 function requireKeys(keys: string[], command: string): void {
   if (keys.length === 0) {
