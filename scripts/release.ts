@@ -253,7 +253,6 @@ function main(): void {
   for (const pkg of packages) {
     toStage.push(pkg.path)
     if (pkg.changelogPath) toStage.push(pkg.changelogPath)
-    if (pkg.hasBuild) toStage.push(`${shortPath(pkg.path.replace(/\/package\.json$/, ''))}/dist`)
   }
   const addArgs = ['add', '--', ...toStage]
   const add = sh('git', addArgs)

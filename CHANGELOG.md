@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.6.1 — 2026-05-22
+
+### Fixed
+
+- **manager**: stop writing a default 90-day expires field (55dbe03)
+
+### Docs
+
+- **readme**: rewrite as person-facing, mermaid architecture (aec1df8)
+- audit + scrub onenv-api / onenv-manager sub-names (cee079d)
+- **site**: surface 0.6 changes on the landing page (5bbd821)
+- **cli**: inline usage examples on every command (c32a1b2)
+
+### Chore
+
+- **release**: add release harness (f184301)
+
 ## 0.6.0 — 2026-05-21
 
 ### Added
