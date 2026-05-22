@@ -1,3 +1,5 @@
+import type { ProjectMarker } from '../lib/project-marker.js'
+
 export type CheckStatus = 'ok' | 'warn' | 'error' | 'skip'
 
 export interface Check {
@@ -12,9 +14,4 @@ export interface DoctorReport {
   project_marker: ProjectMarker | null
   checks: Check[]
   summary: { ok: number; warn: number; error: number; skip: number }
-}
-
-export interface ProjectMarker {
-  kind: 'node' | 'python' | 'rust' | 'go' | 'git'
-  file: string
 }

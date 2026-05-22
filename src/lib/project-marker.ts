@@ -1,8 +1,12 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ProjectMarker } from './doctor-types.js'
 
-const MARKERS: { file: string; kind: ProjectMarker['kind'] }[] = [
+export interface ProjectMarker {
+  kind: 'node' | 'python' | 'rust' | 'go' | 'git'
+  file: string
+}
+
+const MARKERS: ProjectMarker[] = [
   { file: 'package.json', kind: 'node' },
   { file: 'pyproject.toml', kind: 'python' },
   { file: 'Cargo.toml', kind: 'rust' },
@@ -11,8 +15,8 @@ const MARKERS: { file: string; kind: ProjectMarker['kind'] }[] = [
 ]
 
 export function detectProjectMarker(cwd: string): ProjectMarker | null {
-  for (const { file, kind } of MARKERS) {
-    if (existsSync(join(cwd, file))) return { kind, file }
+  for (const m of MARKERS) {
+    if (existsSync(join(cwd, m.file))) return m
   }
   return null
 }

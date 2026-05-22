@@ -1,8 +1,8 @@
 import type { Command } from 'commander'
 import { isJsonMode, output } from '../lib/output.js'
+import { detectProjectMarker } from '../lib/project-marker.js'
 import { runEnvChecks } from './doctor-env-checks.js'
 import { runProjectChecks } from './doctor-project-checks.js'
-import { detectProjectMarker } from './doctor-project-marker.js'
 import { renderDoctorText } from './doctor-render.js'
 import type { Check, DoctorReport } from './doctor-types.js'
 

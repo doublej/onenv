@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import type { Check, ProjectMarker } from './doctor-types.js'
+import type { ProjectMarker } from '../lib/project-marker.js'
+import type { Check } from './doctor-types.js'
 
 export async function runProjectChecks(
   cwd: string,

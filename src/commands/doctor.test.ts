@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { detectProjectMarker } from '../lib/project-marker.js'
 import { runProjectChecks } from './doctor-project-checks.js'
-import { detectProjectMarker } from './doctor-project-marker.js'
 
 function fixture(): string {
   return mkdtempSync(join(tmpdir(), 'onenv-doctor-'))
