@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.7.0 — 2026-05-22
+
+### Changed (breaking)
+
+- **`onenv-api` HTTP server removed.** A consumer audit (no running processes, no launchctl/LaunchAgent entries, no references across the dev tree or `~/.config`) turned up zero callers. The Express server, its Zod schemas, rate-limiter, permission daemon, and dist/ are all gone. If you were running it, the equivalent flow is the CLI itself — every `onenv` command now does what the HTTP endpoints did, with the same 1Password vault on the other side.
+- **Single package at the repo root.** Source moved from `onenv-manager/src` to `src/`. `package.json` renamed `onenv-manager` → `onenv`. The published binary name and the `dist/cli.js` path are unchanged, but if you were sourcing internals from a sibling clone you will need to update paths.
+- **`onenv-api/.env`, `AGENT_API_TOKEN`, `API_HOST`, `API_PORT`, `PERMISSION_TIMEOUT_MS`** all no longer exist. If your shell or systemd unit was setting these, drop them.
+
+### Added
+
+- **`ONENV_CONFIRM_MUTATIONS=1`** — opt-in macOS permission dialog before any `set` / `edit` / `unset` / `import`. Ported from the deleted onenv-api. Off by default. Deny / timeout raises `PERMISSION_DENIED`; non-macOS raises `PERMISSION_UNSUPPORTED`.
+- The agent primer (XML / Markdown / JSON) now includes a `<permission>` section explaining the gate, and no longer documents an HTTP API.
+
+### Fixed
+
+- Pre-commit `check-dist-fresh` hook now checks a single `src/` → `dist/cli.js` pair instead of looping over per-package dist files.
+
+### Notes
+
+- 89 tests pass (was 86 + 3 new permission tests).
+- The `~/.config/onenv-manager/` state directory is unchanged for backwards compatibility — renaming it would force a manual migration for every existing user.
+
 ## v0.6.1 — 2026-05-22
 
 ### Fixed

@@ -237,9 +237,14 @@ function main(): void {
 
   for (const pkg of packages) bumpPackage(pkg, newVersion)
   const rootChangelog = join(REPO, 'CHANGELOG.md')
+  const written = new Set<string>()
   prependChangelog(rootChangelog, block)
-  for (const pkg of packages)
-    if (pkg.changelogPath) prependChangelog(pkg.changelogPath, block)
+  written.add(rootChangelog)
+  for (const pkg of packages) {
+    if (!pkg.changelogPath || written.has(pkg.changelogPath)) continue
+    prependChangelog(pkg.changelogPath, block)
+    written.add(pkg.changelogPath)
+  }
 
   if (!args.yes) {
     const editTargets = [rootChangelog]
