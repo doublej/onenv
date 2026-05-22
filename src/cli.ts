@@ -4,6 +4,7 @@ import * as p from '@clack/prompts'
 import { Command } from 'commander'
 import { buildFile } from './commands/build-file.js'
 import { registerCheckCommand } from './commands/check.js'
+import { registerDoctorCommand } from './commands/doctor.js'
 import { registerEditCommand } from './commands/edit.js'
 import { registerGetCommand } from './commands/get.js'
 import { registerImportCommand } from './commands/import.js'
@@ -124,6 +125,7 @@ registerSetCommand(program)
 registerEditCommand(program)
 registerUnsetCommand(program)
 registerCheckCommand(program)
+registerDoctorCommand(program)
 
 program
   .command('disable')
