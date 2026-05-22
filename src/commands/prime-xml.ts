@@ -6,6 +6,7 @@ import type {
   PermissionSection,
   PrimerData,
   RefsSection,
+  SafetySection,
   SetupSection,
   StateEntry,
   WorkflowSection,
@@ -14,6 +15,7 @@ import type {
 export function renderXml(data: PrimerData): string {
   const sections = [
     tag('role', data.summary),
+    tag('safety', renderSafety(data.safety), { priority: 'critical' }),
     tag('rules', renderRules(data), { priority: 'critical' }),
     tag('commands', renderCommands(data.commands)),
     tag('workflow', renderWorkflow(data.workflow), { strict: 'true' }),
@@ -22,6 +24,11 @@ export function renderXml(data: PrimerData): string {
     tag('permission', renderPermission(data.permission)),
   ]
   return `<onenv-agent-guide version="${escapeAttr(data.version)}">\n\n${sections.join('\n\n')}\n\n</onenv-agent-guide>`
+}
+
+function renderSafety(safety: SafetySection): string {
+  const rules = safety.rules.map((r) => `- ${r}`).join('\n')
+  return [safety.description, '', rules].join('\n')
 }
 
 function tag(name: string, body: string, attrs: Record<string, string> = {}): string {

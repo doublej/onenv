@@ -6,6 +6,7 @@ import type {
   PermissionSection,
   PrimerData,
   RefsSection,
+  SafetySection,
   SetupSection,
   StateEntry,
   WorkflowSection,
@@ -15,6 +16,7 @@ export function renderMarkdown(data: PrimerData): string {
   const sections = [
     `# onenv ${data.version}`,
     `## Role\n\n${data.summary}`,
+    renderSafety(data.safety),
     renderRules(data),
     renderCommands(data.commands),
     renderWorkflow(data.workflow),
@@ -23,6 +25,11 @@ export function renderMarkdown(data: PrimerData): string {
     renderPermission(data.permission),
   ]
   return `${sections.join('\n\n')}\n`
+}
+
+function renderSafety(safety: SafetySection): string {
+  const rules = safety.rules.map((r) => `- ${r}`).join('\n')
+  return ['## Safety', safety.description, rules].join('\n\n')
 }
 
 function renderRules(data: PrimerData): string {
