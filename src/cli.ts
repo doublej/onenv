@@ -10,6 +10,7 @@ import { registerGetCommand } from './commands/get.js'
 import { registerImportCommand } from './commands/import.js'
 import { registerMigrateCommand } from './commands/migrate/index.js'
 import { printPrime } from './commands/prime.js'
+import { LOGO } from './commands/prime-logo.js'
 import { bindChildCleanup, prepareFileInjections } from './commands/run-files.js'
 import { registerSetCommand } from './commands/set.js'
 import { runTui } from './commands/tui.js'
@@ -39,6 +40,7 @@ const program = new Command()
   .version(getPackageVersion())
   .description('Manage 1Password-backed variables with an interactive TUI and scriptable commands.')
   .option('--json', 'Force JSON output (default when piped)')
+  .addHelpText('before', `${LOGO}\n`)
 
 function requireKeys(keys: string[], command: string): void {
   if (keys.length === 0) {

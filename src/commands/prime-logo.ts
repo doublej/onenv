@@ -1,6 +1,6 @@
 export const LOGO = [
   '   ╔══╗',
-  '   ║◎ ╠═══════════▮▮▮▮▮    1Password',
-  '   ║  ╠═══════════▮▮▮▮▮    onenv primer',
+  '   ║◎ ╠═══════════▮▮▮▮▮    onenv',
+  '   ║  ╠═══════════▮▮▮▮▮    1Password secrets',
   '   ╚══╝',
 ].join('\n')
