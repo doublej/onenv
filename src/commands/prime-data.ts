@@ -91,7 +91,7 @@ export function buildPrimer(version: string): PrimerData {
   return {
     version,
     summary:
-      '1Password-backed secret management. Single CLI (onenv) for humans, scripts, and agents. All output is JSON when piped or --json is set. Set ONENV_CONFIRM_MUTATIONS=1 to gate writes behind a macOS desktop dialog.',
+      'You are using `onenv`, a CLI that reads and writes secrets stored in 1Password. Use only the commands and flags documented below — do not invent new ones. stdout is JSON whenever it is not a TTY or `--json` is set; depend on those shapes.',
     safety: buildSafety(),
     setup: {
       description:
@@ -109,7 +109,7 @@ export function buildPrimer(version: string): PrimerData {
       key_regex: '^[A-Za-z_][A-Za-z0-9_]*$',
       key_max_length: 128,
       injection_warning:
-        'BARE KEYS: "export" and "run" inject keys without a namespace prefix as env vars. As of 0.6, the same enabled key existing in more than one of the merged namespaces is a hard error (VALIDATION) rather than a silent last-write-wins. Resolve by disabling the duplicate or splitting the namespaces. Keep keys unique across namespaces you combine.',
+        'BARE KEYS: `export` and `run` inject keys without a namespace prefix as env vars. The same enabled key appearing in two merged namespaces is a hard VALIDATION error. Keep keys unique across namespaces you combine; resolve collisions by disabling the duplicate or splitting the namespaces.',
     },
     refs: {
       description:
@@ -160,7 +160,7 @@ function buildSafety(): SafetySection {
       'Read via onenv, not raw `op` — onenv filters to items tagged `onenv:<namespace>`, so it never reveals unmanaged items in the vault.',
       'Scope listings: prefer `onenv list <namespace>` over `onenv list`, and avoid piping unfiltered listings into shared contexts (chats, PRs, screenshots, transcripts).',
       'Never echo raw secret values to stdout/logs. Use `onenv run -- <cmd>` or `onenv export <ns> -- <cmd>` to inject; use `onenv get --fingerprint` to compare without exposing the value.',
-      'Mutations (`set`, `edit`, `unset`, `import`) hit 1Password — they are not local file edits. Confirm with the user before bulk operations or anything destructive.',
+      'Mutations (`set`, `edit`, `unset`, `import`) hit 1Password — not local files. Before `unset`, `import --overwrite`, or batch `set`/`edit`: state a 1-line plan and wait for the user to approve.',
       'Do not commit `.onenv.json` fields that contain secret values; the file should only reference namespaces.',
     ],
   }

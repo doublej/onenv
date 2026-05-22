@@ -5,13 +5,13 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'set <ns> <key> [--value-stdin]',
       description:
-        'Create or update a secret. Reads the value from an interactive password prompt by default. --value-stdin reads the raw value from stdin instead (use this for scripting: `echo -n "secret" | onenv set ns KEY --value-stdin`). Refuses to run in a non-TTY context without --value-stdin — previously the prompt silently swallowed piped bytes and hung.',
+        'Create or update a secret. Default: interactive password prompt. `--value-stdin` reads the raw value from stdin (`echo -n "secret" | onenv set ns KEY --value-stdin`). In a non-TTY context, `--value-stdin` is required.',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,key}.',
     },
     {
       name: 'edit <ns> <key> [--value-stdin]',
       description:
-        'Update an existing secret. Reads the new value from an interactive password prompt by default. --value-stdin reads from stdin (scripting-friendly). Same non-TTY guard as set.',
+        'Update an existing secret. Default: interactive password prompt. `--value-stdin` reads from stdin (scripting-friendly). Same non-TTY guard as `set`.',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,key}.',
     },
     {
@@ -24,7 +24,7 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'unset <ns> <key...> [-y, --yes]',
       description:
-        'Delete one or more secrets from 1Password. Multiple keys allowed. Prompts for confirmation in a TTY. In a non-TTY context (scripts, CI) --yes is required — without it the command refuses and exits with VALIDATION rather than deleting unattended.',
+        'Delete one or more secrets from 1Password. Multiple keys allowed. Confirms in a TTY; in a non-TTY context (scripts, CI), `--yes` is required (otherwise exits VALIDATION).',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,keys}.',
     },
     {
@@ -67,7 +67,7 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'import <ns> [file] -g, --group <name> [--overwrite] [--from-stdin] [--keys upper-snake|leaf] [--prefix <s>] [--dry-run]',
       description:
-        'Flatten a JSON file into onenv keys with reassembly metadata (group, path, type stored as STRING fields on each item). --group is REQUIRED (previously derived from filename, which leaked temp paths into 1Password). --from-stdin reads JSON from stdin instead of a file path (no filesystem footprint — file arg must be omitted). --overwrite replaces existing keys atomically: either every write lands, or every touched key is restored to its pre-import state on any failure. Without --overwrite, aborts on key collisions or when an existing key has no group / a different group. --keys upper-snake (default) joins the JSON path with underscores ("installed.client_id" → INSTALLED_CLIENT_ID, "scopes[0]" → SCOPES_0). --keys leaf uses only the last key segment, raising on collisions. --prefix prepends a value to every derived key. --dry-run prints the plan without writing.',
+        'Flatten a JSON file into onenv keys with reassembly metadata (group, path, type stored as STRING fields on each item). `--group` is REQUIRED. `--from-stdin` reads JSON from stdin instead of a file path (no filesystem footprint — file arg must be omitted). `--overwrite` replaces existing keys atomically: either every write lands, or every touched key is restored to its pre-import state on any failure. Without `--overwrite`, aborts on key collisions or when an existing key has no group / a different group. `--keys upper-snake` (default) joins the JSON path with underscores ("installed.client_id" → INSTALLED_CLIENT_ID, "scopes[0]" → SCOPES_0). `--keys leaf` uses only the last key segment, raising on collisions. `--prefix` prepends a value to every derived key. `--dry-run` prints the plan without writing.',
       output:
         'TTY: green confirmation. JSON: dry-run → {namespace, group, plan:[{key,path,type}]}. Otherwise → {ok:true,message,namespace,group,count}.',
     },
@@ -81,7 +81,7 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'export <ns[,ns2,...]>',
       description:
-        'Fetch enabled secrets across the listed namespaces and emit as JSON. Hard-errors with VALIDATION if the same enabled key exists in more than one of the listed namespaces — previously the merge silently last-write-wins. Resolve by disabling the duplicate or splitting the namespaces.',
+        'Fetch enabled secrets across the listed namespaces and emit as JSON. Hard-errors VALIDATION on cross-namespace key collisions. Resolve by disabling the duplicate or splitting the namespaces.',
       output: 'Raw object {KEY:"value",...}. Bare keys, see naming.injection_warning.',
     },
     {
