@@ -22,6 +22,19 @@
 - 89 tests pass (was 86 + 3 new permission tests).
 - The `~/.config/onenv-manager/` state directory is unchanged for backwards compatibility — renaming it would force a manual migration for every existing user.
 
+### Migration
+
+If you previously installed onenv via `bun install.ts` or `bun link`, the global `onenv` shim points at the now-deleted `onenv-manager/dist/cli.js`. Re-link after pulling:
+
+```bash
+cd /path/to/onenv
+bun install
+bun run build
+bun link               # re-points ~/.bun/bin/onenv at the new dist path
+```
+
+Or just re-run `bun install.ts` — it does the same thing plus dependency install.
+
 ## v0.6.1 — 2026-05-22
 
 ### Fixed
