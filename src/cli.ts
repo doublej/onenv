@@ -8,6 +8,7 @@ import { registerDoctorCommand } from './commands/doctor.js'
 import { registerEditCommand } from './commands/edit.js'
 import { registerGetCommand } from './commands/get.js'
 import { registerImportCommand } from './commands/import.js'
+import { registerMigrateCommand } from './commands/migrate/index.js'
 import { printPrime } from './commands/prime.js'
 import { bindChildCleanup, prepareFileInjections } from './commands/run-files.js'
 import { registerSetCommand } from './commands/set.js'
@@ -181,6 +182,7 @@ Examples:
   )
 
 registerImportCommand(program)
+registerMigrateCommand(program)
 
 program
   .command('build-file')
