@@ -1,5 +1,6 @@
 import type {
   CommandSpec,
+  DetectedSection,
   ErrorsSection,
   NamingSection,
   OutputContract,
@@ -16,19 +17,42 @@ export function renderXml(data: PrimerData): string {
   const sections = [
     tag('role', data.summary),
     tag('safety', renderSafety(data.safety), { priority: 'critical' }),
+  ]
+  if (data.detected)
+    sections.push(tag('detected', renderDetected(data.detected), { priority: 'critical' }))
+  sections.push(
     tag('rules', renderRules(data), { priority: 'critical' }),
     tag('commands', renderCommands(data.commands)),
     tag('workflow', renderWorkflow(data.workflow), { strict: 'true' }),
     tag('errors', renderErrors(data.errors)),
     tag('output', renderOutputContract(data.output_contract)),
     tag('permission', renderPermission(data.permission)),
-  ]
+  )
   return `<onenv-agent-guide version="${escapeAttr(data.version)}">\n\n${sections.join('\n\n')}\n\n</onenv-agent-guide>`
 }
 
 function renderSafety(safety: SafetySection): string {
   const rules = safety.rules.map((r) => `- ${r}`).join('\n')
   return [safety.description, '', rules].join('\n')
+}
+
+function renderDetected(d: DetectedSection): string {
+  const lines = [
+    `cwd: ${d.cwd}`,
+    `project: ${d.project_marker.kind} (${d.project_marker.file})`,
+    `framework: ${d.framework.kind}${d.framework.public_prefix ? ` (public prefix: ${d.framework.public_prefix})` : ''}`,
+    `.onenv.json: ${d.onenv_json}${d.namespaces_referenced.length ? ` (namespaces: ${d.namespaces_referenced.join(', ')})` : ''}`,
+  ]
+  if (d.env_files.length > 0) {
+    lines.push('env files:')
+    for (const f of d.env_files) {
+      lines.push(`  - ${f.relative} (${f.key_count} keys${f.tracked ? ', tracked in git' : ''})`)
+    }
+  } else {
+    lines.push('env files: none')
+  }
+  lines.push('', `next: ${d.next_action}`, '', `caveat: ${d.caveat}`)
+  return lines.join('\n')
 }
 
 function tag(name: string, body: string, attrs: Record<string, string> = {}): string {

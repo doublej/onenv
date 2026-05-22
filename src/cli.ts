@@ -59,10 +59,14 @@ function argsAfterDoubleDash(): string[] | null {
 program
   .command('prime')
   .description('Print agent primer (XML on TTY, Markdown when piped, JSON with --json)')
-  .action(() => {
+  .option(
+    '--no-detect',
+    'Skip the cwd snapshot block (project marker, env files, .onenv.json status)',
+  )
+  .action(async (options: { detect: boolean }) => {
     const explicitJson = Boolean(program.opts().json)
     const format = explicitJson ? 'json' : process.stdout.isTTY ? 'xml' : 'md'
-    printPrime(format)
+    await printPrime(format, { detect: options.detect })
   })
 
 program

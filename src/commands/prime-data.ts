@@ -1,9 +1,11 @@
+import type { ProjectMarker } from '../lib/project-marker.js'
 import { buildCommands, buildErrors, buildState } from './prime-data-cli.js'
 
 export interface PrimerData {
   version: string
   summary: string
   safety: SafetySection
+  detected: DetectedSection | null
   setup: SetupSection
   naming: NamingSection
   refs: RefsSection
@@ -18,6 +20,17 @@ export interface PrimerData {
 export interface SafetySection {
   description: string
   rules: string[]
+}
+
+export interface DetectedSection {
+  cwd: string
+  project_marker: ProjectMarker
+  framework: { kind: string; public_prefix: string | null }
+  env_files: { relative: string; key_count: number; tracked: boolean }[]
+  onenv_json: 'present' | 'absent' | 'invalid'
+  namespaces_referenced: string[]
+  next_action: string
+  caveat: string
 }
 
 export interface SetupSection {
@@ -93,6 +106,7 @@ export function buildPrimer(version: string): PrimerData {
     summary:
       'You are using `onenv`, a CLI that reads and writes secrets stored in 1Password. Use only the commands and flags documented below — do not invent new ones. stdout is JSON whenever it is not a TTY or `--json` is set; depend on those shapes.',
     safety: buildSafety(),
+    detected: null,
     setup: {
       description:
         'Authenticate via service account (headless) or interactive op signin. The CLI auto-resolves op:// references on first use.',

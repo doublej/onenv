@@ -1,5 +1,6 @@
 import type {
   CommandSpec,
+  DetectedSection,
   ErrorsSection,
   NamingSection,
   OutputContract,
@@ -17,19 +18,48 @@ export function renderMarkdown(data: PrimerData): string {
     `# onenv ${data.version}`,
     `## Role\n\n${data.summary}`,
     renderSafety(data.safety),
+  ]
+  if (data.detected) sections.push(renderDetected(data.detected))
+  sections.push(
     renderRules(data),
     renderCommands(data.commands),
     renderWorkflow(data.workflow),
     renderErrors(data.errors),
     renderOutputContract(data.output_contract),
     renderPermission(data.permission),
-  ]
+  )
   return `${sections.join('\n\n')}\n`
 }
 
 function renderSafety(safety: SafetySection): string {
   const rules = safety.rules.map((r) => `- ${r}`).join('\n')
   return ['## Safety', safety.description, rules].join('\n\n')
+}
+
+function renderDetected(d: DetectedSection): string {
+  const head = [
+    `- cwd: \`${d.cwd}\``,
+    `- project: ${d.project_marker.kind} (\`${d.project_marker.file}\`)`,
+    `- framework: ${d.framework.kind}${d.framework.public_prefix ? ` (public prefix: \`${d.framework.public_prefix}\`)` : ''}`,
+    `- \`.onenv.json\`: ${d.onenv_json}${d.namespaces_referenced.length ? ` — namespaces: ${d.namespaces_referenced.map((n) => `\`${n}\``).join(', ')}` : ''}`,
+  ]
+  const files =
+    d.env_files.length > 0
+      ? [
+          '- env files:',
+          ...d.env_files.map(
+            (f) =>
+              `  - \`${f.relative}\` (${f.key_count} keys${f.tracked ? ', tracked in git' : ''})`,
+          ),
+        ]
+      : ['- env files: none']
+  return [
+    '## Detected (cwd snapshot)',
+    ...head,
+    ...files,
+    `- next: ${d.next_action}`,
+    `- caveat: ${d.caveat}`,
+  ].join('\n')
 }
 
 function renderRules(data: PrimerData): string {
