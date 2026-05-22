@@ -2,6 +2,7 @@ import type { Command } from 'commander'
 import { createOrUpdateVar } from '../index.js'
 import { validationError } from '../lib/errors.js'
 import { success } from '../lib/output.js'
+import { confirmMutation } from '../lib/permission.js'
 import { resolveRef, storeRefs } from '../lib/ref-store.js'
 import { validateKey, validateNamespace } from '../lib/validation.js'
 import { readValueFromPrompt, readValueFromStdin } from './_prompt.js'
@@ -29,6 +30,7 @@ export async function setAction(
   const namespace = validateNamespace(await resolveRef(rawNamespace))
   const safeKey = validateKey(key)
   const next = await resolveValue(namespace, safeKey, options)
+  await confirmMutation({ action: 'set', namespace, details: `key=${safeKey}` })
   await createOrUpdateVar(namespace, safeKey, next)
   await storeRefs([namespace])
   success(`Saved ${namespace}.${safeKey}`, { namespace, key: safeKey })

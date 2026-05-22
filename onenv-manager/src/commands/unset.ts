@@ -3,6 +3,7 @@ import type { Command } from 'commander'
 import { removeVar } from '../index.js'
 import { validationError } from '../lib/errors.js'
 import { success } from '../lib/output.js'
+import { confirmMutation } from '../lib/permission.js'
 import { resolveRef, storeRefs } from '../lib/ref-store.js'
 import { validateKey, validateNamespace } from '../lib/validation.js'
 
@@ -49,6 +50,11 @@ export async function unsetAction(
     const proceed = await confirmOrAbort(namespace, safeKeys)
     if (!proceed) return
   }
+  await confirmMutation({
+    action: 'unset',
+    namespace,
+    details: `keys=${safeKeys.join(',')}`,
+  })
   for (const key of safeKeys) {
     await removeVar(namespace, key)
   }

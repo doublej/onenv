@@ -4,7 +4,7 @@ import { LOGO } from './prime-logo.js'
 import { renderMarkdown } from './prime-md.js'
 import { renderXml } from './prime-xml.js'
 
-export type PrimeFormat = 'xml' | 'json' | 'md'
+export type PrimeFormat = 'xml' | 'md' | 'json'
 
 export function printPrime(format: PrimeFormat): void {
   const data = buildPrimer(getPackageVersion())

@@ -11,6 +11,7 @@ import {
   unsetValue,
 } from '../lib/onenv-client.js'
 import { output, success } from '../lib/output.js'
+import { confirmMutation } from '../lib/permission.js'
 import { resolveRef, storeRefs } from '../lib/ref-store.js'
 import type { JsonLeafType } from '../lib/types.js'
 import { validateKey, validateNamespace } from '../lib/validation.js'
@@ -67,6 +68,12 @@ export async function importJsonFile(
   const keys = rows.map((r) => r.key)
   const snapshot = await fetchSnapshot(namespace, keys)
   validateAgainstSnapshot(snapshot, namespace, opts)
+
+  await confirmMutation({
+    action: 'import',
+    namespace,
+    details: `group=${opts.group} keys=${keys.length}`,
+  })
 
   const written: string[] = []
   try {

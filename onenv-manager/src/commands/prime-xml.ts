@@ -1,9 +1,9 @@
 import type {
-  ApiSection,
   CommandSpec,
   ErrorsSection,
   NamingSection,
   OutputContract,
+  PermissionSection,
   PrimerData,
   RefsSection,
   SetupSection,
@@ -19,7 +19,7 @@ export function renderXml(data: PrimerData): string {
     tag('workflow', renderWorkflow(data.workflow), { strict: 'true' }),
     tag('errors', renderErrors(data.errors)),
     tag('output', renderOutputContract(data.output_contract)),
-    tag('api', renderApi(data.api)),
+    tag('permission', renderPermission(data.permission)),
   ]
   return `<onenv-agent-guide version="${escapeAttr(data.version)}">\n\n${sections.join('\n\n')}\n\n</onenv-agent-guide>`
 }
@@ -143,48 +143,13 @@ function renderOutputContract(c: OutputContract): string {
   ].join('\n')
 }
 
-function renderApi(api: ApiSection): string {
+function renderPermission(perm: PermissionSection): string {
   return [
-    api.description,
+    perm.description,
     '',
-    `URL: ${api.default_url} (default)`,
-    `Auth: ${api.auth}`,
-    `Audit: ${api.audit_header}`,
-    `Rate limit: ${api.rate_limit}`,
-    '',
-    'CONFIG ENV:',
-    renderApiEnv(api),
-    '',
-    'ENDPOINTS:',
-    renderApiEndpoints(api),
-    '',
-    'ERRORS:',
-    renderApiErrors(api),
+    `Trigger: ${perm.trigger_env}`,
+    `Timeout: ${perm.timeout_env}`,
+    `Gated commands: ${perm.gated_commands.join(', ')}`,
+    `On deny / timeout: ${perm.error_code}`,
   ].join('\n')
-}
-
-function renderApiEnv(api: ApiSection): string {
-  return api.config_env
-    .map((e) => {
-      const flags = [e.required ? 'required' : 'optional']
-      if (e.default !== undefined) flags.push(`default ${e.default}`)
-      return `- ${e.name} (${flags.join(', ')}) — ${e.description}`
-    })
-    .join('\n')
-}
-
-function renderApiEndpoints(api: ApiSection): string {
-  return api.endpoints
-    .map((e) => {
-      const parts = [`${e.method.padEnd(4)} ${e.path}`, `[${e.permission}]`]
-      if (e.body) parts.push(`body: ${e.body}`)
-      parts.push(`→ ${e.response}`)
-      const line = `  ${parts.join('  ')}`
-      return e.notes ? `${line}\n    notes: ${e.notes}` : line
-    })
-    .join('\n')
-}
-
-function renderApiErrors(api: ApiSection): string {
-  return api.error_responses.map((e) => `- ${e.status} ${e.body} — ${e.when}`).join('\n')
 }

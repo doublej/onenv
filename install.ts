@@ -3,7 +3,6 @@ import { basename, dirname, join, relative } from 'node:path'
 
 const ROOT = import.meta.dir
 const MANAGER = `${ROOT}/onenv-manager`
-const API = `${ROOT}/onenv-api`
 const CLACK_PATH = `${MANAGER}/node_modules/@clack/prompts/dist/index.mjs`
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', '.next', '.nuxt', '__pycache__', '.venv', 'venv'])
 const ONENV_VAULT = 'onenv'
@@ -87,36 +86,6 @@ async function ensureVault(): Promise<void> {
   await spin(`Creating vault "${ONENV_VAULT}"`, async () => {
     await run([OP_BIN, 'vault', 'create', ONENV_VAULT], ROOT)
   })
-}
-
-async function configureEnv(): Promise<void> {
-  p.log.step('Configure onenv-api')
-  const envPath = `${API}/.env`
-  if (await Bun.file(envPath).exists()) {
-    const overwrite = guard(await p.confirm({ message: '.env already exists — overwrite?', initialValue: false }))
-    if (!overwrite) return
-  }
-
-  const token = guard(await p.text({
-    message: 'Set an API token for authenticating requests to the agent API',
-    placeholder: 'a-secret-string-of-your-choice',
-    validate: (v) => (v.trim().length > 0 ? undefined : 'Token is required'),
-  }))
-
-  const lines = [
-    `AGENT_API_TOKEN=${token}`,
-    '',
-    '# API_HOST=127.0.0.1',
-    '# API_PORT=4317',
-    '# PERMISSION_TIMEOUT_MS=120000',
-    '',
-    `ONENV_VAULT=${ONENV_VAULT}`,
-    `ONENV_CATEGORY=${ONENV_CATEGORY}`,
-    '# ONENV_SERVICE_ACCOUNT_TOKEN=',
-    '',
-  ]
-  await Bun.write(envPath, lines.join('\n'))
-  p.log.success('.env written')
 }
 
 // --- env scanning & migration ---
@@ -251,12 +220,9 @@ p.log.success('op CLI found')
 if (!Bun.which('just')) p.log.info('just not found — optional but recommended: brew install just')
 
 await ensureVault()
-await installDeps('onenv-manager', MANAGER)
-await installDeps('onenv-api', API)
-await build('onenv-manager', MANAGER)
-await build('onenv-api', API)
-await configureEnv()
-await spin('Linking onenv-manager CLI', () => run(['bun', 'link'], MANAGER))
+await installDeps('onenv', MANAGER)
+await build('onenv', MANAGER)
+await spin('Linking onenv CLI', () => run(['bun', 'link'], MANAGER))
 
 try {
   const proc = Bun.spawn(['onenv', 'list'], { stdout: 'ignore', stderr: 'ignore' })
@@ -271,8 +237,5 @@ const wantScan = guard(await p.confirm({
   initialValue: true,
 }))
 if (wantScan) await migrateEnvFiles()
-
-p.log.info('Start the agent API:\n  cd onenv-api && bun run --env-file .env start')
-p.log.info('Verify:\n  curl http://127.0.0.1:4317/health')
 
 p.outro('Installation complete')

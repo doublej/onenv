@@ -1,5 +1,5 @@
 {
   "type": "workspace",
-  "description": "Environment variable management tool: onenv-api REST service + onenv-manager admin frontend.",
+  "description": "onenv — 1Password-backed environment variable manager. Single TypeScript CLI replacing .env files.",
   "archived": false
 }
