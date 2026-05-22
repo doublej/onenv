@@ -111,7 +111,8 @@ function isOther(name: string): boolean {
 }
 
 function formatCommand(c: CommandSpec): string {
-  return `- \`onenv ${c.name}\` — ${c.description}\n  - Output: ${c.output}`
+  const cmd = c.name === 'onenv' || c.name.startsWith('onenv ') ? c.name : `onenv ${c.name}`
+  return `- \`${cmd}\` — ${c.description}\n  - Output: ${c.output}`
 }
 
 function renderWorkflow(w: WorkflowSection): string {
