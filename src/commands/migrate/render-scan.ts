@@ -78,7 +78,13 @@ function renderWarnings(r: ScanResult): string {
 function renderNextStep(r: ScanResult): string {
   if (r.env_files.length === 0) return chalk.gray('Nothing to migrate.')
   return chalk.gray(
-    `Next: review suggested namespaces, then run 'onenv migrate plan' (not implemented yet).`,
+    [
+      'Next:',
+      '  1. onenv migrate plan --out .onenv-migrate-plan.json   # write a reviewable plan (no changes)',
+      '  2. edit the plan if needed (set "action":"skip" on keys you don\'t want migrated)',
+      '  3. onenv migrate apply --plan .onenv-migrate-plan.json --dry-run',
+      '  4. onenv migrate apply --plan .onenv-migrate-plan.json',
+    ].join('\n'),
   )
 }
 
