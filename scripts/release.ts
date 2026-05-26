@@ -272,7 +272,7 @@ function main(): void {
   process.stderr.write(`\nrelease: tagged v${newVersion}\n`)
   if (!args.noPushHint) {
     process.stderr.write(
-      `next:\n  git push origin main\n  git push origin v${newVersion}\n  gh release create v${newVersion} --notes-from-tag      # if you use gh\n`,
+      `next:\n  just release-push      # pushes main + v${newVersion}; CI builds binaries and publishes the GitHub Release\n  (raw: git push origin main && git push origin v${newVersion})\n`,
     )
   }
 }
