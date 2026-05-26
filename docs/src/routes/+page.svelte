@@ -6,84 +6,84 @@
     {
       title: '.env replacement',
       description:
-        'Same KEY=value ergonomics. Values live in a 1Password vault — nothing on disk, no plaintext drifting between laptops.',
+        'Same KEY=value ergonomics. Values live in a 1Password vault instead of a file on disk.',
     },
     {
       title: 'onenv run -- <cmd>',
       description:
-        'Reads your project’s .onenv.json, fetches enabled secrets, injects them as env vars, execs the command. Process exits, secrets disappear.',
+        'Reads the project’s .onenv.json, fetches enabled secrets, injects them as env vars, execs the command. Secrets exist only in the child process.',
     },
     {
-      title: 'Pipeable writes — new in 0.6',
+      title: 'Pipeable writes',
       description:
-        'onenv set <ns> <KEY> --value-stdin reads the secret from a pipe instead of an interactive prompt. Chain with op read, pbpaste, or aws ssm get-parameter to move secrets between stores without ever touching shell history.',
+        'onenv set <ns> <KEY> --value-stdin reads the secret from stdin instead of an interactive prompt. Chain with op read, pbpaste, or aws ssm get-parameter; the value does not enter shell history.',
     },
     {
-      title: 'Drift detection — new in 0.6',
+      title: 'Drift detection',
       description:
-        'onenv check compares process.env against the project’s onenv-stored secrets via SHA-256 fingerprints. Reports match / differ / missing / shell-only and exits non-zero on drift. Never prints a value.',
+        'onenv check compares process.env against the project’s stored secrets via SHA-256 fingerprints. Reports match / differ / missing / shell-only and exits non-zero on drift. Values are never printed.',
     },
     {
-      title: 'Safe comparison — new in 0.6',
+      title: 'Fingerprint comparison',
       description:
-        'onenv get <ns> <KEY> --fingerprint returns sha256:<hex>. Diff two environments, confirm a rotation reached prod, or verify a teammate has the same secret — without ever materializing the value.',
+        'onenv get <ns> <KEY> --fingerprint returns sha256:<hex>. Diff two environments or confirm a rotation reached prod without exposing the value.',
     },
     {
-      title: 'Atomic bulk import — new in 0.6',
+      title: 'Atomic bulk import',
       description:
-        'onenv import --overwrite snapshots every key it would touch, writes the new payload, and rolls back the entire batch if any single write fails. Either every key lands at the new value or nothing changes.',
+        'onenv import --overwrite snapshots every key it would touch, writes the new payload, and rolls back the batch if any single write fails.',
     },
     {
       title: 'JSON file workflow',
       description:
-        'onenv import flattens GCP service accounts, OAuth tokens, kubeconfigs into per-leaf 1Password items. onenv run --file group:VAR materializes the rebuilt JSON to a 0600 tempfile and exposes its path. Add --from-stdin to import without writing the JSON to disk first.',
+        'onenv import flattens GCP service accounts, OAuth tokens, and kubeconfigs into per-leaf 1Password items. onenv run --file group:VAR materializes the rebuilt JSON to a 0600 tempfile and exposes its path. --from-stdin imports without writing the source JSON to disk.',
     },
     {
       title: 'Per-project namespaces',
       description:
-        '.onenv.json declares which namespaces a project pulls. No global blast radius — a frontend project never sees backend keys it shouldn’t. Cross-namespace key collisions are a hard error, not silent last-write-wins.',
+        '.onenv.json declares which namespaces a project pulls. A frontend project does not see backend keys it did not request. Cross-namespace key collisions are a hard error, not silent last-write-wins.',
     },
     {
-      title: 'Non-TTY guardrails — new in 0.6',
+      title: 'Non-TTY guardrails',
       description:
-        'onenv unset refuses to delete from a non-interactive context unless --yes is passed. onenv set and onenv edit refuse to read from a non-TTY stdin unless --value-stdin is passed — no more silent hangs when a piped value disappears into the password prompt.',
+        'onenv unset refuses to delete from a non-interactive context unless --yes is passed. onenv set and onenv edit require --value-stdin when stdin is not a TTY; piped values error out instead of hanging at the password prompt.',
     },
     {
       title: 'Disable without deleting',
       description:
-        'onenv disable hides a key from run/export but keeps it in 1Password. enable restores. State lives in ~/.config/onenv-manager/state.json.',
+        'onenv disable hides a key from run and export but keeps it in 1Password. enable restores. State lives in ~/.config/onenv-manager/state.json.',
     },
     {
       title: 'Agent primer',
       description:
-        'onenv prime emits the full CLI spec — every command shape, every flag, every error code, every state file — as XML, Markdown, or JSON. Drop straight into agent context.',
+        'onenv prime emits the full CLI spec — every command, flag, error code, and state file — as XML, Markdown, or JSON. Pipeable into agent context.',
     },
     {
-      title: 'Service-account ready',
+      title: 'Service-account auth',
       description:
-        'OP_SERVICE_ACCOUNT_TOKEN accepts a literal token or an op:// reference. First call resolves and caches at ~/.config/onenv-manager/op-token (mode 0600). Subsequent calls are silent. Self-heals on auth failure.',
+        'OP_SERVICE_ACCOUNT_TOKEN accepts a literal token or an op:// reference. The first call resolves and caches at ~/.config/onenv-manager/op-token (mode 0600); subsequent calls are silent. Re-resolves on auth failure.',
     },
     {
       title: '@-refs',
       description:
-        'Positional shorthand against the last namespace list — @1, @2, @last. Fast repeat work without retyping long names.',
+        'Positional shorthand against the last namespace list: @1, @2, @last. Avoids retyping long namespace names.',
     },
     {
       title: 'JSON output',
       description:
-        'Every command emits machine-readable JSON when piped or with --json. Errors return a structured envelope with code, category, retryable flag, hint, suggestion.',
+        'Every command emits machine-readable JSON when piped or with --json. Errors return a structured envelope with code, category, retryable flag, hint, and suggestion.',
     },
   ];
 
   const steps = [
     {
       title: 'Install',
-      description: 'Requires the 1Password CLI and Bun. The installer wires everything up and walks you through optional .env migration.',
+      description: 'Requires the 1Password CLI and Bun. The installer handles config and optional .env migration.',
       code: 'brew install 1password-cli bun\nop signin\nop vault create onenv\n\ngit clone https://github.com/doublej/onenv && cd onenv\nbun install.ts',
     },
     {
       title: 'Add a secret',
-      description: 'Interactive prompt — values never touch your shell history.',
+      description: 'Interactive prompt. The value does not appear in shell history or process listings.',
       code: 'onenv set aws AWS_ACCESS_KEY_ID',
     },
     {
@@ -93,22 +93,22 @@
     },
     {
       title: 'Run with secrets injected',
-      description: 'Replaces source .env && node app.js. Secrets exist only in the spawned process’ env, gone when it exits.',
+      description: 'Replaces source .env && node app.js. Secrets exist only in the child process’s environment.',
       code: 'onenv run -- node app.js',
     },
     {
-      title: 'Pipe values in without shell history',
-      description: 'New in 0.6: --value-stdin reads the secret from a pipe so it never appears in your shell history or process list. Great for migrating from another secret store.',
+      title: 'Pipe values from another store',
+      description: '--value-stdin reads the secret from a pipe so the value does not appear in shell history or process listings. Useful for migrating from another secret store.',
       code: 'op read "op://Private/AWS/credential" | onenv set aws AWS_SECRET_ACCESS_KEY --value-stdin\npbpaste | onenv edit cloudflare CLOUDFLARE_API_TOKEN --value-stdin',
     },
     {
-      title: 'Check for drift before you run',
-      description: 'New in 0.6: onenv check compares the current shell environment against the project’s stored secrets via SHA-256. Exits non-zero on mismatch — drop it in a precommit hook or shell prompt without leaking values.',
+      title: 'Check for drift',
+      description: 'onenv check compares the current shell environment against the project’s stored secrets via SHA-256. Exits non-zero on mismatch. Safe in a precommit hook or shell prompt: no values are printed.',
       code: 'onenv check\nonenv get aws AWS_SECRET_ACCESS_KEY --fingerprint\n# sha256:f5a1...',
     },
     {
       title: 'Materialize a JSON file',
-      description: 'For tools that want a path instead of env vars (GCP, kubeconfigs, OAuth). Tempfile lives under XDG_RUNTIME_DIR with mode 0600 and is removed on child exit / SIGINT / SIGTERM.',
+      description: 'For tools that expect a path instead of env vars (GCP, kubeconfigs, OAuth). The tempfile lives under XDG_RUNTIME_DIR with mode 0600 and is removed on child exit, SIGINT, or SIGTERM.',
       code: 'onenv import google /tmp/sa.json --group sa\nonenv run --file sa:GOOGLE_APPLICATION_CREDENTIALS -- python app.py',
     },
   ];
@@ -128,26 +128,24 @@
 <header class="hero">
   <div class="container">
     <h1>onenv</h1>
+    <p class="tagline">Environment variables, backed by 1Password.</p>
     <p class="description">
-      A 1Password-backed environment variable manager. Replaces <code>.env</code> files with per-key 1Password items and a scriptable CLI built for agents and humans.
+      Replaces <code>.env</code> files with per-key 1Password items. Scriptable CLI with structured JSON output.
     </p>
-    <div class="hero-cta">
-      <a class="btn primary" href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub</a>
-      <a class="btn secondary" href="#getting-started">Get started</a>
+    <div class="hero-actions">
+      <div class="install-box">
+        <code>{INSTALL}</code>
+        <button type="button" onclick={copyInstall} aria-label="Copy install command">
+          {copyState === 'copied' ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+    </div>
+    <div class="hero-links">
+      <a class="hero-link" href={REPO_URL} target="_blank" rel="noopener noreferrer">View on GitHub</a>
+      <a class="hero-link" href="#getting-started">Get started &rarr;</a>
     </div>
   </div>
 </header>
-
-<section class="install">
-  <div class="container">
-    <div class="install-box">
-      <code>{INSTALL}</code>
-      <button type="button" onclick={copyInstall} aria-label="Copy install command">
-        {copyState === 'copied' ? 'Copied' : 'Copy'}
-      </button>
-    </div>
-  </div>
-</section>
 
 <main>
   <section class="features">
@@ -188,10 +186,10 @@
     <div class="container">
       <h2>Why</h2>
       <p>
-        <code>.env</code> files leak. They sit unencrypted next to source, drift between machines, get pasted into chat, end up in <code>git status</code> more often than they should, and nobody ever rotates the keys. Sharing them means Slack DMs and stale copies on three laptops.
+        <code>.env</code> files sit unencrypted next to source code, drift between machines, and end up in <code>git status</code>. Sharing them means Slack DMs and stale copies on multiple laptops.
       </p>
       <p>
-        onenv keeps the same <code>KEY=value</code> ergonomics, but the values live in your 1Password vault — biometric or service-account auth, full audit log, atomic rotation, and an HTTP-API surface that gates every mutation behind explicit human approval.
+        onenv keeps the same <code>KEY=value</code> ergonomics, but values live in a 1Password vault: biometric or service-account auth, full audit log, and atomic rotation. Mutations can be gated behind a macOS permission dialog by setting <code>ONENV_CONFIRM_MUTATIONS=1</code>.
       </p>
     </div>
   </section>
@@ -201,11 +199,11 @@
   <div class="container">
     <p>
       <a href={REPO_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
-      &nbsp;·&nbsp;
+      <span class="sep">&middot;</span>
       <a href="{REPO_URL}/blob/main/INSTALL.md" target="_blank" rel="noopener noreferrer">Install guide</a>
-      &nbsp;·&nbsp;
+      <span class="sep">&middot;</span>
       <a href="{REPO_URL}/tree/main/docs/guides" target="_blank" rel="noopener noreferrer">Guides</a>
-      &nbsp;·&nbsp;
+      <span class="sep">&middot;</span>
       MIT
     </p>
   </div>
@@ -218,105 +216,104 @@
   }
 
   .hero {
-    padding: calc(var(--section-padding) * 1.5) var(--container-padding) var(--section-padding);
+    padding: 80px 0 40px;
     text-align: center;
     animation: fadeSlideUp 0.5s ease-out forwards;
   }
 
   h1 {
-    font-size: clamp(2.5rem, 5vw, 3.75rem);
-    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    font-size: 4.5rem;
+    font-weight: 500;
     letter-spacing: -0.04em;
     line-height: 1;
-    margin-bottom: 1.25rem;
+    margin-bottom: 12px;
+  }
+
+  .tagline {
+    font-size: 1.35rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 12px;
   }
 
   .description {
-    font-size: 1.125rem;
+    font-size: 1.1rem;
     color: var(--text-secondary);
-    max-width: 640px;
-    margin: 0 auto 2rem;
+    max-width: 600px;
+    margin: 0 auto 32px;
   }
 
   .description :global(code) {
+    font-family: 'DM Mono', monospace;
     background: var(--bg-code);
+    color: var(--text-code);
     padding: 0.1em 0.4em;
     border-radius: 4px;
-    font-size: 0.95em;
+    font-size: 0.9em;
   }
 
-  .hero-cta {
+  .hero-actions {
     display: flex;
-    gap: 12px;
     justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .btn {
-    display: inline-block;
-    padding: 12px 22px;
-    border-radius: 8px;
-    font-weight: 500;
-    text-decoration: none;
-    border: 1px solid var(--border);
-    min-height: 44px;
-    line-height: 20px;
-    transition: transform 0.15s ease-out, background 0.15s ease-out;
-  }
-
-  .btn:hover {
-    transform: translateY(-1px);
-  }
-
-  .btn.primary {
-    background: var(--accent);
-    color: var(--bg-secondary);
-    border-color: var(--accent);
-  }
-
-  .btn.secondary {
-    background: var(--bg-secondary);
-  }
-
-  .install {
-    padding: 0 var(--container-padding) var(--section-padding);
-    animation: fadeSlideUp 0.5s ease-out 200ms forwards;
-    opacity: 0;
+    margin-bottom: 16px;
   }
 
   .install-box {
-    max-width: 720px;
-    margin: 0 auto;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 16px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 18px;
-    overflow-x: auto;
+    gap: 12px;
+    max-width: 100%;
+    background: var(--bg-code);
+    color: var(--text-code);
+    border-radius: 8px;
+    padding: 8px 8px 8px 16px;
+    overflow: hidden;
   }
 
   .install-box code {
-    flex: 1;
+    font-size: 0.9rem;
     white-space: nowrap;
-    color: var(--text-primary);
+    overflow-x: auto;
   }
 
   .install-box button {
-    background: var(--bg-code);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 8px 14px;
+    background: none;
+    border: 1px solid #444;
+    color: var(--text-code);
+    padding: 6px 14px;
+    border-radius: 4px;
     font: inherit;
-    font-size: 0.9rem;
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 0.85rem;
     cursor: pointer;
-    min-height: 36px;
+    transition: border-color 0.15s;
+    flex-shrink: 0;
   }
 
   .install-box button:hover {
-    background: var(--border);
+    border-color: #777;
+  }
+
+  .hero-links {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .hero-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: border-color 0.15s;
+  }
+
+  .hero-link:hover {
+    border-color: var(--text-tertiary);
   }
 
   main {
@@ -329,11 +326,11 @@
   }
 
   h2 {
-    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    font-size: 1.8rem;
     font-weight: 600;
     letter-spacing: -0.02em;
-    margin-bottom: 2rem;
     text-align: center;
+    margin-bottom: 40px;
   }
 
   .grid {
@@ -344,9 +341,9 @@
 
   .feature-card {
     background: var(--bg-secondary);
-    padding: 22px 24px;
+    padding: 28px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 8px;
     animation: fadeSlideUp 0.5s ease-out forwards;
     opacity: 0;
   }
@@ -360,7 +357,7 @@
   .feature-card p {
     font-size: 0.95rem;
     color: var(--text-secondary);
-    line-height: 1.55;
+    line-height: 1.5;
   }
 
   .getting-started {
@@ -372,15 +369,15 @@
   .steps {
     display: flex;
     flex-direction: column;
-    gap: 28px;
-    max-width: 820px;
+    gap: 24px;
+    max-width: 720px;
     margin: 0 auto;
   }
 
   .step {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 24px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
     animation: fadeSlideUp 0.5s ease-out forwards;
     opacity: 0;
   }
@@ -388,38 +385,47 @@
   .step-number {
     width: 36px;
     height: 36px;
+    min-width: 36px;
     border-radius: 50%;
-    background: var(--accent);
-    color: var(--bg-secondary);
+    background: var(--text-primary);
+    color: #fff;
     display: grid;
     place-items: center;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+  }
+
+  .step-content {
+    flex: 1;
+    min-width: 0;
   }
 
   .step-content h3 {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 600;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
 
   .step-content p {
     color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
     margin-bottom: 12px;
   }
 
   pre {
-    background: var(--bg-primary);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 14px 16px;
+    background: var(--bg-code);
+    color: var(--text-code);
+    border-radius: 6px;
+    padding: 12px 16px;
     overflow-x: auto;
-    font-size: 0.92rem;
+    font-size: 0.85rem;
     line-height: 1.55;
+    margin: 0;
   }
 
   pre code {
-    color: var(--text-primary);
+    color: var(--text-code);
     white-space: pre;
   }
 
@@ -431,9 +437,10 @@
 
   .why :global(code) {
     background: var(--bg-code);
+    color: var(--text-code);
     padding: 0.1em 0.4em;
     border-radius: 4px;
-    font-size: 0.95em;
+    font-size: 0.9em;
   }
 
   footer {
@@ -441,7 +448,20 @@
     text-align: center;
     border-top: 1px solid var(--border);
     color: var(--text-tertiary);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+  }
+
+  footer a {
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+
+  .sep {
+    margin: 0 8px;
   }
 
   @media (max-width: 1000px) {
@@ -451,23 +471,32 @@
   }
 
   @media (max-width: 700px) {
-    .grid {
-      grid-template-columns: 1fr;
+    h1 {
+      font-size: 3rem;
     }
 
-    .step {
+    .tagline {
+      font-size: 1.15rem;
+    }
+
+    .grid {
       grid-template-columns: 1fr;
-      gap: 12px;
     }
 
     .install-box {
       flex-direction: column;
       align-items: stretch;
+      gap: 8px;
+      padding: 12px;
     }
 
     .install-box code {
       white-space: pre-wrap;
       word-break: break-word;
+    }
+
+    .install-box button {
+      width: 100%;
     }
   }
 </style>
