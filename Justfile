@@ -67,9 +67,14 @@ check:
 build:
     bun run build
 
+# Cross-compile standalone binaries → dist-bin/ (+ SHA256SUMS)
+[group('build')]
+build-binaries:
+    bun run build:binaries
+
 [group('cleanup')]
 clean:
-    rm -rf dist/ node_modules/.cache/
+    rm -rf dist/ dist-bin/ node_modules/.cache/
 
 # Dry-run a release (no bumps, no commit, no tag) — prints the draft changelog
 [group('release')]
@@ -86,18 +91,17 @@ release BUMP="patch":
 release-quick BUMP="patch":
     bun run scripts/release.ts {{BUMP}} --yes
 
-# Push the most recent tag and main
+# Push main + latest tag; the tag push makes CI build binaries + publish the release
 [group('release')]
 release-push:
     #!/usr/bin/env zsh
     set -euo pipefail
     tag=$(git describe --tags --abbrev=0)
-    echo "→ pushing main + ${tag}"
+    echo "→ pushing main + ${tag} — CI builds binaries and publishes the release"
     git push origin main
     git push origin "${tag}"
     if command -v gh >/dev/null 2>&1; then
-        echo "→ creating gh release"
-        gh release create "${tag}" --notes-from-tag
+        echo "→ follow it:  gh run watch"
     else
-        echo "→ skip gh release: gh CLI not on PATH"
+        echo "→ follow it in the repo's Actions tab"
     fi
