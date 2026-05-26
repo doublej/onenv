@@ -8,4 +8,5 @@ Thumbs.db
 
 node_modules/
 dist/
+dist-bin/
 *.original.md

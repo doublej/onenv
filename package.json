@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc && chmod +x dist/cli.js",
+    "build:binaries": "bun run scripts/build-binaries.ts",
     "dev": "tsx watch src/cli.ts",
     "start": "node dist/cli.js",
     "test": "vitest run src",
