@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Strict Conventional Commits gate.
+#
+# Activate once per clone:   just hooks-install   (sets core.hooksPath=.githooks)
+# Bypass a single commit:    git commit --no-verify
+#
+# Accepts:  <type>(<scope>)!: <subject>
+#   type  ∈ feat fix perf refactor docs chore test build ci style revert
+#   scope   optional, lowercase/digits/._-/
+#   !       optional, marks a breaking change
+# Exempts merge / revert / fixup! / squash! commits.
+
+set -euo pipefail
+
+header="$(head -n1 "$1")"
+
+case "$header" in
+  'Merge '* | 'Revert '* | 'fixup! '* | 'squash! '* | 'amend! '*) exit 0 ;;
+esac
+
+types='feat|fix|perf|refactor|docs|chore|test|build|ci|style|revert'
+pattern="^(${types})(\([a-z0-9._/-]+\))?(!)?: .+"
+
+if [[ ! "$header" =~ $pattern ]]; then
+  cat >&2 <<EOF
+✗ commit rejected — message must follow Conventional Commits:
+
+    <type>(<scope>)!: <subject>
+
+  type ∈ ${types//|/ }
+  scope optional & lowercase; '!' marks a breaking change.
+
+  examples:
+    feat(cli): add export --json
+    fix(op-token): invalidate cache on rotation
+    chore(release): v0.8.0
+
+  exempt: merge / revert / fixup! / squash! commits
+  bypass: git commit --no-verify
+EOF
+  exit 1
+fi
+
+if (( ${#header} > 100 )); then
+  echo "✗ commit rejected — subject is ${#header} chars (max 100). Tighten it." >&2
+  exit 1
+fi
+
+exit 0

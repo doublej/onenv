@@ -8,6 +8,13 @@ default:
 [group('setup')]
 install:
     bun install
+    just hooks-install
+
+# Activate the strict commit-msg hook for this clone (Conventional Commits)
+[group('setup')]
+hooks-install:
+    git config core.hooksPath .githooks
+    @echo "✓ git hooks active (.githooks) — commit messages now validated"
 
 [group('develop')]
 dev:
