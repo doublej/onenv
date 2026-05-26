@@ -30,6 +30,7 @@ import {
 } from './lib/manager-service.js'
 import { ensureServiceAccountToken } from './lib/op-token.js'
 import { handleError, output, setJsonMode, success } from './lib/output.js'
+import { shouldUseJsonOutput } from './lib/output-mode.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
 import { resolveRef, storeRefs } from './lib/ref-store.js'
 import type { NamespaceVar } from './lib/types.js'
@@ -368,11 +369,13 @@ program
     output(vars)
   })
 
-program.hook('preAction', () => {
-  const opts = program.opts()
-  if (opts.json || !process.stdout.isTTY) {
-    setJsonMode(true)
-  }
+program.hook('preAction', (_thisCommand, actionCommand) => {
+  const enable = shouldUseJsonOutput({
+    explicitJson: Boolean(program.opts().json),
+    isTty: Boolean(process.stdout.isTTY),
+    commandName: actionCommand.name(),
+  })
+  if (enable) setJsonMode(true)
 })
 
 ensureServiceAccountToken()
