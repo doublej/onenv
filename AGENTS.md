@@ -17,6 +17,7 @@ just typecheck      # bunx tsc --noEmit
 just test           # bun run test
 bun run dev         # dev with watch
 bun run build       # tsc → dist/
+just build-binaries # cross-compile standalone binaries → dist-bin/ (+ SHA256SUMS)
 ```
 
 Single test: `bun run vitest run src/lib/state-store.test.ts`
@@ -68,7 +69,7 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - `src/lib/ref-store.ts` — @-ref shorthand storage (positional: `@1`, `@2`, `@last`)
 - `src/lib/op-token.ts` — `op://` reference resolution + cache at `~/.config/onenv-manager/op-token`
 - `src/lib/validation.ts` — namespace + key regex/length validation
-- `src/lib/version.ts` — reads version from `package.json` at runtime
+- `src/lib/version.ts` — resolves the CLI version: `process.env.ONENV_VERSION` (baked into compiled binaries via `--env`) else reads `package.json` at runtime
 - `src/lib/types.ts` — shared `NamespaceVar` (with optional `fingerprint`), `StateFile`, and `JsonLeafType` types
 
 ## Conventions
@@ -78,3 +79,9 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - Vitest for testing, co-located test files (`*.test.ts`)
 - Strict TypeScript, `.js` extensions in imports
 - State file path: `~/.config/onenv-manager/state.json` (or `$XDG_CONFIG_HOME`). The directory name is historical — do not introduce a parallel `~/.config/onenv/` location.
+
+## Releasing
+
+- **Conventional Commits are enforced.** `.githooks/commit-msg` rejects non-conforming subjects; activate once per clone with `just hooks-install` (run automatically by `just install`). Bypass a single commit with `git commit --no-verify`.
+- **Cut a release** with `just release <patch|minor|major>` — bumps `package.json`, drafts `CHANGELOG.md` from commits since the last tag, commits `chore(release): vX.Y.Z`, and tags it. Pushes nothing.
+- **Publish** with `just release-push`. Pushing the `v*` tag triggers `.github/workflows/release.yml`, which verifies the tag matches `package.json`, runs the quality gate, cross-compiles binaries, and creates the GitHub Release with assets + `SHA256SUMS`. CI is the single source of truth — do not `gh release create` by hand.
