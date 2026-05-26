@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.7.1 — 2026-05-26
+
+### Added
+
+- **ci**: publish cross-platform binaries on tag push (6f1b0d9)
+- **release**: build binaries via just, delegate publish to CI (d07cd62)
+- **hooks**: enforce conventional commits via commit-msg gate (d44af2d)
+- **build**: cross-compile standalone binaries for macOS + Linux (a618f4a)
+- **version**: bake version into compiled binaries via env injection (95775ad)
+- **migrate**: add 'plan' and 'apply' for scriptable migration (76b1cae)
+- **cli**: add root-level examples block to --help (417ba9f)
+- **prime**: add cwd-aware 'detected' section (47cf7b5)
+- **cli**: show ascii logo in --help (1b01165)
+- **migrate**: add 'onenv migrate scan' for codebase migration (4bb3ebf)
+- **doctor**: add onenv doctor command for environment + project health (3745744)
+- **hooks**: add prime-gate Claude Code hook sketch (17c263b)
+- **prime**: add safety section to agent primer (9061f82)
+
+### Fixed
+
+- **release**: point push hint at CI-driven publish (1828613)
+- **migrate**: update scan next-step hint now that plan/apply exist (7fbdb3c)
+- **prime**: avoid duplicate onenv prefix for bare-arg entries (bb3c4d3)
+
+### Changed
+
+- **prime**: regroup commands and fix silent drops (b6bb1bd)
+- extract project-marker detection to src/lib (a32edc8)
+
+### Docs
+
+- **site**: redesign landing hero, dark code blocks, tighter copy (2ba73b2)
+- document binary build + strict release/commit workflow (001abcd)
+- **readme**: add prebuilt-binary install path (79796d6)
+- **changelog**: add 0.7.0 re-link migration note (b88d47a)
+
+### Chore
+
+- **prime**: tighten primer copy (4bd785b)
+
 ## v0.7.0 — 2026-05-22
 
 ### Changed (breaking)
