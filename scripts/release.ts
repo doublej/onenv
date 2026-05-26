@@ -115,6 +115,15 @@ function lastTag(): string | null {
   return r.code === 0 ? r.stdout.trim() : null
 }
 
+// Derive the GitHub release page for this tag from the origin remote.
+// Returns null for missing or non-GitHub remotes.
+function releaseUrl(version: string): string | null {
+  const r = sh('git', ['remote', 'get-url', 'origin'])
+  if (r.code !== 0) return null
+  const m = r.stdout.trim().match(/github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/)
+  return m ? `https://github.com/${m[1]}/releases/tag/v${version}` : null
+}
+
 interface CommitEntry {
   hash: string
   type: string
@@ -274,6 +283,8 @@ function main(): void {
     process.stderr.write(
       `next:\n  just release-push      # pushes main + v${newVersion}; CI builds binaries and publishes the GitHub Release\n  (raw: git push origin main && git push origin v${newVersion})\n`,
     )
+    const url = releaseUrl(newVersion)
+    if (url) process.stderr.write(`\nrelease: ${url}\n`)
   }
 }
 
