@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.7.2 — 2026-05-26
+
+### Added
+
+- **release**: print GitHub release URL after tagging (f8c32e3)
+
 ## v0.7.1 — 2026-05-26
 
 ### Added
