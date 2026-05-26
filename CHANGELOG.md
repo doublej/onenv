@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.7.3 — 2026-05-26
+
+### Fixed
+
+- **get**: emit raw value when piped instead of JSON (a17da0c)
+
+### Docs
+
+- **get**: clarify get prints raw value, --json opts into JSON (8ec98a8)
+
 ## v0.7.2 — 2026-05-26
 
 ### Added
