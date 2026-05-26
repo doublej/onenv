@@ -36,13 +36,29 @@ the values live in 1Password:
 
 ## Install
 
-You need [Bun](https://bun.sh), the [1Password CLI](https://developer.1password.com/docs/cli/), and the 1Password desktop app for biometric unlock.
+Either path needs the [1Password CLI](https://developer.1password.com/docs/cli/) and the 1Password desktop app for biometric unlock:
 
 ```bash
-brew install 1password-cli bun
+brew install 1password-cli
 op signin
 op vault create onenv
+```
 
+### Prebuilt binary (no Bun, no clone)
+
+Each [release](https://github.com/doublej/onenv/releases/latest) ships self-contained executables for macOS and Linux plus a `SHA256SUMS` manifest.
+
+```bash
+# macOS arm64 — swap darwin-x64 / linux-x64 / linux-arm64 as needed
+curl -fsSL -o onenv https://github.com/doublej/onenv/releases/latest/download/onenv-darwin-arm64
+chmod +x onenv && sudo mv onenv /usr/local/bin/onenv
+onenv --version
+```
+
+### From source (for development)
+
+```bash
+brew install bun
 git clone https://github.com/doublej/onenv && cd onenv
 bun install.ts          # interactive setup — builds the CLI, links it, optionally imports your .env files
 ```
