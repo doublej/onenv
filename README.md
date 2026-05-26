@@ -184,8 +184,10 @@ onenv tui                                 # interactive TUI
 the most recent list you saw.
 
 Pipe any command (or pass `--json`) and you get a machine-readable JSON
-shape, including a structured error envelope with codes, categories, and a
-retryable flag.
+shape — the exception is `get`, which prints the bare value so it pipes
+straight into other tools (pass `--json` if you want the `{"value":…}`
+shape). Errors come back as a structured envelope with codes, categories,
+and a retryable flag.
 
 ## Running unattended (CI, daemons)
 

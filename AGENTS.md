@@ -49,12 +49,12 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 
 ### Source layout
 
-- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, disable, enable, import, build-file, init, run, export.
+- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, doctor, disable, enable, import, migrate, build-file, init, run, export.
 - `src/commands/set.ts` / `edit.ts` / `unset.ts` / `get.ts` / `check.ts` — extracted single-key commands (each exports an action + `registerXCommand`)
 - `src/commands/_prompt.ts` — `assertValue`, `readValueFromPrompt`, `readValueFromStdin` shared by `set` and `edit`
 - `src/commands/tui.ts` — interactive @clack/prompts TUI loop
 - `src/commands/prime.ts` — agent primer dispatcher (XML on TTY, Markdown when piped, JSON with `--json`)
-- `src/commands/prime-data.ts` + `prime-data-cli.ts` + `prime-data-api.ts` — primer data shape
+- `src/commands/prime-data.ts` + `prime-data-cli.ts` — primer data shape; `prime-detect.ts` builds the gated cwd snapshot
 - `src/commands/prime-xml.ts` / `prime-md.ts` — XML and Markdown renderers; `prime-logo.ts` holds the ASCII key banner
 - `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback and `--from-stdin`
 - `src/commands/build-file.ts` — reassemble a grouped JSON file from stored leaves
