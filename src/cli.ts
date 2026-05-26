@@ -41,7 +41,7 @@ const program = new Command()
   .name('onenv')
   .version(getPackageVersion())
   .description('Manage 1Password-backed variables with an interactive TUI and scriptable commands.')
-  .option('--json', 'Force JSON output (default when piped)')
+  .option('--json', 'Force JSON output (auto-enabled when piped, except get)')
   .addHelpText('before', `${LOGO}\n`)
   .addHelpText('after', ROOT_HELP_EXAMPLES)
 

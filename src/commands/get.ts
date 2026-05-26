@@ -80,7 +80,9 @@ export function registerGetCommand(program: Command): void {
       `
 Examples:
   $ onenv get aws AWS_SECRET_ACCESS_KEY
-      Print the raw value to stdout
+      Print the raw value to stdout — safe to pipe straight into another tool
+  $ onenv get aws AWS_SECRET_ACCESS_KEY --json
+      Emit {"value":"…"} instead — opt in when you want the structured shape
   $ onenv get aws AWS_SECRET_ACCESS_KEY --fingerprint
       Print sha256 only — safe to share when comparing
   $ onenv get aws AWS_SECRET_ACCESS_KEY --meta --fingerprint
