@@ -86,15 +86,16 @@ export function buildCommands(): CommandSpec[] {
         'No --out: prints the reassembled JSON to stdout. With --out: writes the file and emits {ok:true,message,namespace,group,out} in JSON mode.',
     },
     {
-      name: 'export <ns[,ns2,...]>',
+      name: 'export <ns[,ns2,...]> --reveal [--format json|shell]',
       description:
-        'Fetch enabled secrets across the listed namespaces and emit as JSON. Hard-errors VALIDATION on cross-namespace key collisions. Resolve by disabling the duplicate or splitting the namespaces.',
-      output: 'Raw object {KEY:"value",...}. Bare keys, see naming.injection_warning.',
+        "Fetch enabled secrets across the listed namespaces and print them. Requires --reveal — without it, hard-errors VALIDATION instead of leaking secrets to stdout. --format shell emits `export KEY='value'` lines for `eval` into a shell (default json). Hard-errors VALIDATION on cross-namespace key collisions; resolve by disabling the duplicate or splitting the namespaces.",
+      output:
+        'json: {KEY:"value",...}. shell: export KEY=\'value\' lines. Bare keys, see naming.injection_warning.',
     },
     {
       name: 'export <ns[,ns2,...]> -- <cmd...>',
       description:
-        'Same as export, but exec <cmd> with the secrets injected instead of printing. Same cross-namespace collision check applies.',
+        'Exec <cmd> with the secrets injected into its environment instead of printing — no --reveal needed since nothing is written to stdout. Same cross-namespace collision check applies.',
       output: 'Mirrors the child exit code. No onenv output written.',
     },
     {

@@ -154,7 +154,7 @@ export function buildPrimer(version: string): PrimerData {
       description:
         'Output mode: TTY → human text (chalk). Piped or --json → machine-readable JSON.',
       raw_data:
-        'list, list <ns>, export <ns> emit raw data (string[], [{key,disabled}], {KEY:"val"}).',
+        'list, list <ns>, export <ns> --reveal emit raw data (string[], [{key,disabled}], {KEY:"val"}).',
       envelope:
         'set, edit, unset, disable, enable, init emit {ok:true, message, ...data} in JSON mode.',
       child_process:

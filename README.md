@@ -169,7 +169,8 @@ onenv init                                # write .onenv.json for the current pr
 onenv check                               # diff process.env against the vault (no values printed)
 onenv run    -- <cmd>                     # run cmd with project secrets injected
 onenv export <ns[,ns2]> -- <cmd>          # run cmd with the listed namespaces injected
-onenv export <ns[,ns2]>                   # print enabled values as JSON
+onenv export <ns[,ns2]> --reveal          # print enabled values as JSON (explicit opt-in)
+eval "$(onenv export <ns> --reveal --format shell)"  # load a namespace into your shell
 
 onenv import <ns> <file.json> --group <name>  # flatten a JSON file into onenv keys
 onenv import <ns> --group <name> --from-stdin # same, but read JSON from stdin

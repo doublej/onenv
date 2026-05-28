@@ -6,6 +6,7 @@ import { buildFile } from './commands/build-file.js'
 import { registerCheckCommand } from './commands/check.js'
 import { registerDoctorCommand } from './commands/doctor.js'
 import { registerEditCommand } from './commands/edit.js'
+import { registerExportCommand } from './commands/export.js'
 import { registerGetCommand } from './commands/get.js'
 import { ROOT_HELP_EXAMPLES } from './commands/help-examples.js'
 import { registerImportCommand } from './commands/import.js'
@@ -23,6 +24,7 @@ import {
   getNamespaces,
   getNamespaceVars,
 } from './index.js'
+import { argsAfterDoubleDash } from './lib/argv.js'
 import { validationError } from './lib/errors.js'
 import {
   getNamespaceVarsWithFingerprints,
@@ -52,11 +54,6 @@ function requireKeys(keys: string[], command: string): void {
       `Provide key names as arguments: onenv ${command} <namespace> <key...>`,
     )
   }
-}
-
-function argsAfterDoubleDash(): string[] | null {
-  const dashIndex = process.argv.indexOf('--')
-  return dashIndex === -1 ? null : process.argv.slice(dashIndex + 1)
 }
 
 program
@@ -307,52 +304,7 @@ function collectOption(value: string, prev: string[]): string[] {
   return [...prev, value]
 }
 
-program
-  .command('export')
-  .description('Export enabled variable values as JSON, or run a command with them injected')
-  .argument('<namespaces>', 'Comma-separated namespaces, e.g. aws,project (supports @refs)')
-  .argument('[-- command...]', 'Command to run with exported vars as env')
-  .allowExcessArguments(true)
-  .action(async (rawNamespaces: string) => {
-    const parts = rawNamespaces
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-    if (parts.length === 0) {
-      throw validationError('At least one namespace is required', 'onenv export aws,project')
-    }
-    const namespaces = (await Promise.all(parts.map(resolveRef))).map(validateNamespace)
-    await storeRefs(namespaces)
-    const values = await exportEnabledValuesStrict(namespaces)
-    const cmd = argsAfterDoubleDash()
-
-    if (!cmd) {
-      output(values)
-      return
-    }
-
-    if (cmd.length === 0) {
-      throw validationError(
-        'No command provided after --',
-        'onenv export porkbun -- python demo.py',
-      )
-    }
-
-    const child = spawn(cmd[0], cmd.slice(1), {
-      stdio: 'inherit',
-      env: { ...process.env, ...values },
-    })
-    child.on('close', (code) => process.exit(code ?? 1))
-  })
-  .addHelpText(
-    'after',
-    `
-Examples:
-  $ onenv export aws,cloudflare
-      Print enabled vars from both namespaces as JSON
-  $ onenv export aws -- terraform apply
-      Inject aws vars into the environment for a single command`,
-  )
+registerExportCommand(program)
 
 // Intent-first routing: bare argument → list namespace, no args → tui
 program
