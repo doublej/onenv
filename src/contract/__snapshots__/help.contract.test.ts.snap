@@ -1,0 +1,140 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`help text contract > onenv --help 1`] = `
+"   ╔══╗
+   ║◎ ╠═══════════▮▮▮▮▮    onenv
+   ║  ╠═══════════▮▮▮▮▮    1Password secrets
+   ╚══╝
+
+Usage: onenv [options] [command] [input]
+
+Manage 1Password-backed variables with an interactive TUI and scriptable
+commands.
+
+Arguments:
+  input                                          Namespace name or @ref → auto-routes to list
+
+Options:
+  -V, --version                                  output the version number
+  --json                                         Force JSON output (auto-enabled when piped, except get)
+  -h, --help                                     display help for command
+
+Commands:
+  prime [options]                                Print agent primer (XML on TTY, Markdown when piped, JSON with --json)
+  tui                                            Open interactive terminal UI
+  list [options] [namespace]                     List namespaces or variables in a namespace
+  get [options] <namespace> <key>                Read a single variable value (use --fingerprint to compare without exposing it)
+  set [options] <namespace> <key>                Create or update a variable
+  edit [options] <namespace> <key>               Edit an existing variable value
+  unset [options] <namespace> <keys...>          Delete one or more variables from 1Password
+  check                                          Compare process.env against onenv for the project namespaces (no values printed)
+  doctor                                         Run health checks on the onenv environment and current project
+  disable <namespace> <keys...>                  Disable one or more variables without deleting
+  enable <namespace> <keys...>                   Re-enable one or more previously disabled variables
+  import [options] <namespace> [file]            Flatten a JSON file (or stdin) into onenv keys with reassembly metadata
+  migrate                                        Migrate an existing codebase to onenv
+  build-file [options] <namespace>               Reassemble a grouped JSON file from onenv keys
+  init                                           Set up .onenv.json for the current project
+  run [options] [-- command...]                  Run project command with secrets injected from .onenv.json
+  export [options] <namespaces> [-- command...]  Inject enabled variables into a command, or print them with --reveal (add --format shell to eval into your shell)
+
+Examples:
+  $ onenv
+      Open the interactive TUI
+  $ onenv set aws AWS_ACCESS_KEY_ID
+      Store a secret in 1Password under the "aws" namespace
+  $ onenv init
+      Pick namespaces for the current project (writes .onenv.json)
+  $ onenv run -- node app.js
+      Inject the project's secrets and exec the command
+  $ onenv export aws,cloudflare -- terraform apply
+      Inject ad-hoc namespaces and exec a one-off command
+  $ onenv list aws
+      Show keys in the "aws" namespace (no values)
+  $ onenv doctor
+      Run health checks (op CLI, vault, project config)
+  $ onenv prime
+      Print the agent primer (full CLI + API contract)
+
+Run \`onenv <command> --help\` for command-specific examples.
+"
+`;
+
+exports[`help text contract > onenv export --help 1`] = `
+"Usage: onenv export [options] <namespaces> [-- command...]
+
+Inject enabled variables into a command, or print them with --reveal (add
+--format shell to eval into your shell)
+
+Arguments:
+  namespaces      Comma-separated namespaces, e.g. aws,project (supports @refs)
+  -- command      Command to run with exported vars as env
+
+Options:
+  --reveal        Print secret values to stdout (required to print; not needed
+                  with -- <cmd>)
+  --format <fmt>  Output shape with --reveal: json (default) or shell (default:
+                  "json")
+  -h, --help      display help for command
+
+Examples:
+  $ onenv export aws -- terraform apply
+      Inject aws vars into a command (never printed; no --reveal needed)
+  $ onenv export aws --reveal
+      Print enabled vars as JSON — refuses without --reveal
+  $ eval "$(onenv export aws --reveal --format shell)"
+      Load the namespace's vars into your current shell
+"
+`;
+
+exports[`help text contract > onenv get --help 1`] = `
+"Usage: onenv get [options] <namespace> <key>
+
+Read a single variable value (use --fingerprint to compare without exposing it)
+
+Arguments:
+  namespace      Namespace (supports @refs)
+  key            Variable name
+
+Options:
+  --fingerprint  Print sha256:<hex> instead of the value
+  --meta         Include group/path/type metadata
+  -h, --help     display help for command
+
+Examples:
+  $ onenv get aws AWS_SECRET_ACCESS_KEY
+      Print the raw value to stdout — safe to pipe straight into another tool
+  $ onenv get aws AWS_SECRET_ACCESS_KEY --json
+      Emit {"value":"…"} instead — opt in when you want the structured shape
+  $ onenv get aws AWS_SECRET_ACCESS_KEY --fingerprint
+      Print sha256 only — safe to share when comparing
+  $ onenv get aws AWS_SECRET_ACCESS_KEY --meta --fingerprint
+      Fingerprint plus group/path/type metadata
+"
+`;
+
+exports[`help text contract > onenv list --help 1`] = `
+"Usage: onenv list [options] [namespace]
+
+List namespaces or variables in a namespace
+
+Arguments:
+  namespace   Namespace (supports @refs)
+
+Options:
+  --groups    Group keys by their group field (slower: fetches metadata per
+              item)
+  --meta      Include group, path, type, and sha256 fingerprint per key (slower)
+  -h, --help  display help for command
+
+Examples:
+  $ onenv list
+      List every namespace onenv knows about
+  $ onenv list aws
+      List variables in the aws namespace
+  $ onenv list aws --meta
+      Include group/path/type plus sha256 fingerprints
+  $ onenv list aws --groups
+      Bucket vars by their group field
+"
+`;
