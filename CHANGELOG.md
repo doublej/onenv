@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.8.0 — 2026-05-28
+
+### Added
+
+- **export**: require --reveal to print secrets, add --format shell (f74b9ff)
+
+### Docs
+
+- fix stale command list, dead file ref, and get-pipes-JSON claim (ddbe2fd)
+
 ## v0.7.3 — 2026-05-26
 
 ### Fixed
