@@ -10,6 +10,7 @@ import { registerExportCommand } from './commands/export.js'
 import { registerGetCommand } from './commands/get.js'
 import { ROOT_HELP_EXAMPLES } from './commands/help-examples.js'
 import { registerImportCommand } from './commands/import.js'
+import { registerLearnCommands } from './commands/learn.js'
 import { registerMigrateCommand } from './commands/migrate/index.js'
 import { printPrime } from './commands/prime.js'
 import { LOGO } from './commands/prime-logo.js'
@@ -189,6 +190,7 @@ Examples:
 
 registerImportCommand(program)
 registerMigrateCommand(program)
+registerLearnCommands(program)
 
 program
   .command('build-file')
