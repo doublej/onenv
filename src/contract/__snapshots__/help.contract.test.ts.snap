@@ -33,6 +33,9 @@ Commands:
   enable <namespace> <keys...>                   Re-enable one or more previously disabled variables
   import [options] <namespace> [file]            Flatten a JSON file (or stdin) into onenv keys with reassembly metadata
   migrate                                        Migrate an existing codebase to onenv
+  learn [text...]                                Record a reusable onenv learning for future agents (shared memory)
+  vote <id> <dir>                                Vote up or down on a learning (see \`onenv learnings\`)
+  learnings [options]                            List top onenv learnings by vote score
   build-file [options] <namespace>               Reassemble a grouped JSON file from onenv keys
   init                                           Set up .onenv.json for the current project
   run [options] [-- command...]                  Run project command with secrets injected from .onenv.json

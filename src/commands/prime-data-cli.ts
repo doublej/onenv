@@ -111,6 +111,26 @@ export function buildCommands(): CommandSpec[] {
       output: 'XML or JSON document describing the full CLI + API contract.',
     },
     {
+      name: 'learn <text...>',
+      description:
+        'Record a reusable onenv learning for future agents (shared memory). Capture one concrete, reusable sentence — quoted or bare words both work. Idempotent: the same text returns the existing entry (content-hash id), never a duplicate.',
+      output:
+        'Always JSON: {ok:true, id:"L<6-hex>", created:boolean, score, text}. Empty text → {err:"EMPTY", hint}.',
+    },
+    {
+      name: 'vote <id> up|down',
+      description:
+        'Vote on a learning you actually used (see `onenv learnings` for ids). No vote identity — votes are anonymous and uncapped.',
+      output:
+        'Always JSON: {ok:true, id, score, up, down}. {err:"BAD_DIR"} for a bad direction, {err:"NOT_FOUND"} for an unknown id.',
+    },
+    {
+      name: 'learnings [--limit <n>] [--fmt table|jsonl]',
+      description:
+        'List the top onenv learnings by vote score (score=up−down, ties broken by upvotes then recency). The top 10 are also embedded in this primer (see <learnings>).',
+      output: 'TTY: human table. --fmt jsonl: one JSON object per line {id,score,up,down,text}.',
+    },
+    {
       name: 'onenv <ns>',
       description: 'Bare-arg shorthand: equivalent to "onenv list <ns>". Supports @-refs.',
       output: '[{key,disabled}] — same shape as list <ns>.',

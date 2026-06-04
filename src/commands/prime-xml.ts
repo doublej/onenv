@@ -2,6 +2,7 @@ import type {
   CommandSpec,
   DetectedSection,
   ErrorsSection,
+  LearningsSection,
   NamingSection,
   OutputContract,
   PermissionSection,
@@ -27,6 +28,7 @@ export function renderXml(data: PrimerData): string {
     tag('errors', renderErrors(data.errors)),
     tag('output', renderOutputContract(data.output_contract)),
     tag('permission', renderPermission(data.permission)),
+    tag('learnings', renderLearnings(data.learnings)),
   )
   return `<onenv-agent-guide version="${escapeAttr(data.version)}">\n\n${sections.join('\n\n')}\n\n</onenv-agent-guide>`
 }
@@ -123,6 +125,7 @@ function groupCommands(commands: CommandSpec[]): { label: string; entries: Comma
     { label: 'RUN / EXPORT', prefixes: RUN_PREFIXES },
     { label: 'GROUPED FILES', prefixes: FILE_PREFIXES },
     { label: 'DIAGNOSTICS', prefixes: DIAGNOSTICS_PREFIXES },
+    { label: 'LEARNINGS (shared memory)', prefixes: LEARNINGS_PREFIXES },
   ]
   const assigned = new Set<CommandSpec>()
   const groups = buckets.map(({ label, prefixes }) => {
@@ -138,6 +141,7 @@ const CORE_PREFIXES = ['set ', 'edit ', 'get ', 'unset ', 'list', 'disable ', 'e
 const RUN_PREFIXES = ['run ', 'export ']
 const FILE_PREFIXES = ['import ', 'build-file ']
 const DIAGNOSTICS_PREFIXES = ['check', 'doctor', 'prime']
+const LEARNINGS_PREFIXES = ['learn ', 'vote ', 'learnings ']
 
 function matchCategory(name: string, prefixes: string[]): boolean {
   return prefixes.some((p) => name === p.trim() || name.startsWith(p))
@@ -185,4 +189,19 @@ function renderPermission(perm: PermissionSection): string {
     `Gated commands: ${perm.gated_commands.join(', ')}`,
     `On deny / timeout: ${perm.error_code}`,
   ].join('\n')
+}
+
+function renderLearnings(l: LearningsSection): string {
+  const protocol = l.protocol.map((p) => `- ${p}`).join('\n')
+  const body = [protocol, '']
+  if (l.top.length === 0) {
+    body.push('No learnings yet. Record one with `onenv learn "..."`.')
+  } else {
+    body.push(`Top ${l.top.length} learnings (apply, then vote):`)
+    for (const e of l.top) {
+      const sign = e.score > 0 ? `+${e.score}` : `${e.score}`
+      body.push(`  [${e.id}] ${sign}  ${e.text}`)
+    }
+  }
+  return body.join('\n')
 }

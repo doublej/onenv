@@ -2,6 +2,7 @@ import type {
   CommandSpec,
   DetectedSection,
   ErrorsSection,
+  LearningsSection,
   NamingSection,
   OutputContract,
   PermissionSection,
@@ -27,6 +28,7 @@ export function renderMarkdown(data: PrimerData): string {
     renderErrors(data.errors),
     renderOutputContract(data.output_contract),
     renderPermission(data.permission),
+    renderLearnings(data.learnings),
   )
   return `${sections.join('\n\n')}\n`
 }
@@ -121,6 +123,7 @@ function groupCommands(commands: CommandSpec[]): { label: string; entries: Comma
     { label: 'Run / Export', prefixes: RUN_PREFIXES },
     { label: 'Grouped files', prefixes: FILE_PREFIXES },
     { label: 'Diagnostics', prefixes: DIAGNOSTICS_PREFIXES },
+    { label: 'Learnings (shared memory)', prefixes: LEARNINGS_PREFIXES },
   ]
   const assigned = new Set<CommandSpec>()
   const groups = buckets.map(({ label, prefixes }) => {
@@ -136,6 +139,7 @@ const CORE_PREFIXES = ['set ', 'edit ', 'get ', 'unset ', 'list', 'disable ', 'e
 const RUN_PREFIXES = ['run ', 'export ']
 const FILE_PREFIXES = ['import ', 'build-file ']
 const DIAGNOSTICS_PREFIXES = ['check', 'doctor', 'prime']
+const LEARNINGS_PREFIXES = ['learn ', 'vote ', 'learnings ']
 
 function matchCategory(name: string, prefixes: string[]): boolean {
   return prefixes.some((p) => name === p.trim() || name.startsWith(p))
@@ -187,4 +191,18 @@ function renderPermission(perm: PermissionSection): string {
     `- Gated commands: ${perm.gated_commands.map((c) => `\`${c}\``).join(', ')}`,
     `- On deny / timeout: ${perm.error_code}`,
   ].join('\n')
+}
+
+function renderLearnings(l: LearningsSection): string {
+  const lines = ['## Learnings (shared memory)', ...l.protocol.map((p) => `- ${p}`), '']
+  if (l.top.length === 0) {
+    lines.push('No learnings yet. Record one with `onenv learn "..."`.')
+  } else {
+    lines.push(`### Top ${l.top.length} (apply, then vote)`)
+    for (const e of l.top) {
+      const sign = e.score > 0 ? `+${e.score}` : `${e.score}`
+      lines.push(`- \`[${e.id}]\` ${sign} — ${e.text}`)
+    }
+  }
+  return lines.join('\n')
 }

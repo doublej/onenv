@@ -1,3 +1,4 @@
+import { loadLearnings } from '../lib/learnings.js'
 import { getPackageVersion } from '../lib/version.js'
 import { buildPrimer, type PrimerData } from './prime-data.js'
 import { buildDetectedSection } from './prime-detect.js'
@@ -12,7 +13,7 @@ export interface PrimeOptions {
 }
 
 export async function printPrime(format: PrimeFormat, options: PrimeOptions): Promise<void> {
-  const data = buildPrimer(getPackageVersion())
+  const data = buildPrimer(getPackageVersion(), await loadLearnings())
   if (options.detect) data.detected = await buildDetectedSection(process.cwd())
   const body = renderBody(format, data)
   const text = format === 'json' ? body : `${LOGO}\n\n${body}`
