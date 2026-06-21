@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process'
-import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { atomicWriteFile } from './atomic-write.js'
 
 function getConfigRoot(): string {
   return process.env.XDG_CONFIG_HOME ?? join(homedir(), '.config')
@@ -42,8 +43,7 @@ async function readCache(): Promise<string | null> {
 async function writeCache(value: string): Promise<void> {
   const path = getTokenCachePath()
   await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, value, 'utf-8')
-  await chmod(path, 0o600)
+  await atomicWriteFile(path, value)
 }
 
 async function opRead(reference: string): Promise<string> {

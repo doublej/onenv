@@ -1,6 +1,7 @@
-import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { atomicWriteFile } from './atomic-write.js'
 import type { StateFile } from './types.js'
 
 const DEFAULT_STATE: StateFile = {
@@ -35,8 +36,7 @@ async function writeState(state: StateFile): Promise<void> {
   const statePath = getStatePath()
   await mkdir(dirname(statePath), { recursive: true })
   await chmod(dirname(statePath), 0o700)
-  await writeFile(statePath, JSON.stringify(state, null, 2), 'utf-8')
-  await chmod(statePath, 0o600)
+  await atomicWriteFile(statePath, JSON.stringify(state, null, 2))
 }
 
 export async function isDisabled(namespace: string, key: string): Promise<boolean> {
