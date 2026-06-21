@@ -141,7 +141,10 @@ export async function exportEnabledValuesStrict(
     const lines = conflicts.map(([k, ns]) => `  ${k}: ${ns.join(', ')}`).join('\n')
     throw validationError(
       `Key collisions across namespaces:\n${lines}`,
-      'Remove the duplicate from one namespace, or disable it: onenv disable <ns> <key>',
+      'These keys flat-inject as bare env vars in run/export. Fix one of: ' +
+        '(a) if a namespace is only consumed via --file/build-file, add it to "fileOnlyNamespaces" in .onenv.json — excluded from injection, still materializable; ' +
+        '(b) "onenv disable <ns> <key>" excludes a key from flat injection ONLY — build-file/--file still include it; ' +
+        '(c) rename or remove the duplicate.',
     )
   }
   return Object.fromEntries(perNamespace.flatMap(({ entries }) => entries))
