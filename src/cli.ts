@@ -274,7 +274,11 @@ program
   .allowExcessArguments(true)
   .action(async (_commandArgs: string[], options: { file: string[]; fileRw: string[] }) => {
     const config = await readProjectConfig()
-    const values = await exportEnabledValuesStrict(config.namespaces)
+    // fileOnly namespaces are materialized via --file only — never flat-injected,
+    // so they're skipped here (and thus exempt from cross-namespace collision checks).
+    const fileOnly = new Set(config.fileOnlyNamespaces)
+    const flatNamespaces = config.namespaces.filter((ns) => !fileOnly.has(ns))
+    const values = await exportEnabledValuesStrict(flatNamespaces)
     const cmd = argsAfterDoubleDash()
     if (!cmd || cmd.length === 0) {
       throw validationError('No command provided after --', 'onenv run -- node app.js')

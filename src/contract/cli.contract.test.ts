@@ -2,7 +2,7 @@
 // shelling out to `onenv export`). When one of these fails, a backwards-compat
 // promise is being broken — bump the major and document it in CHANGELOG, don't
 // just update the assertion.
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ensureBuilt, makeWorkspace, runCli, type StubItem } from './harness.js'
@@ -127,6 +127,78 @@ describe('disable/enable', () => {
     const r = runCli(['enable', 'aws', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'], dws)
     expect(r.code).toBe(0)
     expect(disabledKeys(dws, 'aws')).toBeUndefined()
+  })
+})
+
+describe('fileOnlyNamespaces (run)', () => {
+  // app is flat-injected; gws-x and gws-y deliberately share key names (ACCESS,
+  // REFRESH) in a "token" group — the per-account OAuth shape that hard-collides
+  // under flat injection unless the namespaces are declared fileOnly.
+  const FILE_ITEMS: StubItem[] = [
+    { id: 'f-app', namespace: 'app', key: 'APP_KEY', value: 'app-val' },
+    // biome-ignore format: keep one item per line for readability
+    { id: 'f-x1', namespace: 'gws-x', key: 'ACCESS', value: 'x-access', group: 'token', path: 'access', type: 'string' },
+    // biome-ignore format: keep one item per line for readability
+    { id: 'f-x2', namespace: 'gws-x', key: 'REFRESH', value: 'x-refresh', group: 'token', path: 'refresh', type: 'string' },
+    // biome-ignore format: keep one item per line for readability
+    { id: 'f-y1', namespace: 'gws-y', key: 'ACCESS', value: 'y-access', group: 'token', path: 'access', type: 'string' },
+    // biome-ignore format: keep one item per line for readability
+    { id: 'f-y2', namespace: 'gws-y', key: 'REFRESH', value: 'y-refresh', group: 'token', path: 'refresh', type: 'string' },
+  ]
+
+  function workspaceWith(config: object): string {
+    const fws = makeWorkspace(FILE_ITEMS)
+    writeFileSync(join(fws, '.onenv.json'), JSON.stringify(config))
+    return fws
+  }
+
+  const ALL = { namespaces: ['app', 'gws-x', 'gws-y'], fileOnlyNamespaces: ['gws-x', 'gws-y'] }
+  const PRINT_ENV =
+    'process.stdout.write((process.env.APP_KEY||"none")+":"+(process.env.ACCESS||"none"))'
+  const PRINT_FILE = 'process.stdout.write(require("fs").readFileSync(process.env.TOK,"utf-8"))'
+
+  it('flat-injects non-fileOnly namespaces and skips fileOnly ones', () => {
+    const r = runCli(['run', '--', 'node', '-e', PRINT_ENV], workspaceWith(ALL))
+    expect(r.code).toBe(0)
+    expect(r.stdout).toBe('app-val:none')
+  })
+
+  it('does not error on a key collision confined to fileOnly namespaces', () => {
+    const r = runCli(['run', '--', 'node', '-e', 'process.stdout.write("ok")'], workspaceWith(ALL))
+    expect(r.code).toBe(0)
+    expect(r.stdout).toBe('ok')
+  })
+
+  it('still errors on a collision between NON-fileOnly namespaces', () => {
+    const fws = workspaceWith({ namespaces: ['gws-x', 'gws-y'] })
+    const r = runCli(['run', '--', 'node', '-e', 'process.stdout.write("ok")'], fws)
+    expect(r.code).not.toBe(0)
+    expect((r.json() as { error?: { code?: string } }).error?.code).toBe('VALIDATION')
+  })
+
+  it('materializes --file from a fileOnly namespace', () => {
+    const r = runCli(
+      ['run', '--file', 'gws-x/token:TOK', '--', 'node', '-e', PRINT_FILE],
+      workspaceWith(ALL),
+    )
+    expect(r.code).toBe(0)
+    expect(JSON.parse(r.stdout)).toEqual({ access: 'x-access', refresh: 'x-refresh' })
+  })
+
+  it('handles an all-fileOnly project with --file (empty flat values, no crash)', () => {
+    const fws = workspaceWith({
+      namespaces: ['gws-x', 'gws-y'],
+      fileOnlyNamespaces: ['gws-x', 'gws-y'],
+    })
+    const r = runCli(['run', '--file', 'gws-y/token:TOK', '--', 'node', '-e', PRINT_FILE], fws)
+    expect(r.code).toBe(0)
+    expect(JSON.parse(r.stdout)).toEqual({ access: 'y-access', refresh: 'y-refresh' })
+  })
+
+  it('export of a fileOnly namespace still prints — fileOnly only governs run', () => {
+    const r = runCli(['export', 'gws-x', '--reveal'], workspaceWith(ALL))
+    expect(r.code).toBe(0)
+    expect(r.json()).toEqual({ ACCESS: 'x-access', REFRESH: 'x-refresh' })
   })
 })
 
