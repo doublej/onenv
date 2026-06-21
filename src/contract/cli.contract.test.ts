@@ -2,6 +2,8 @@
 // shelling out to `onenv export`). When one of these fails, a backwards-compat
 // promise is being broken — bump the major and document it in CHANGELOG, don't
 // just update the assertion.
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { ensureBuilt, makeWorkspace, runCli, type StubItem } from './harness.js'
 
@@ -97,6 +99,34 @@ describe('get', () => {
     expect(r.code).toBe(0)
     expect(r.stdout.trim()).toMatch(/^sha256:[0-9a-f]{64}$/)
     expect(r.stdout).not.toContain('AKIA_EXAMPLE')
+  })
+})
+
+describe('disable/enable', () => {
+  function disabledKeys(workspace: string, namespace: string): string[] | undefined {
+    const raw = readFileSync(join(workspace, 'config', 'onenv-manager', 'state.json'), 'utf-8')
+    return (JSON.parse(raw) as { disabled: Record<string, string[]> }).disabled[namespace]
+  }
+
+  it('disable persists every key to state.json over a piped (non-TTY) run', () => {
+    const dws = makeWorkspace(ITEMS)
+    const r = runCli(['disable', 'aws', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'], dws)
+    expect(r.code).toBe(0)
+    expect(r.json()).toMatchObject({
+      ok: true,
+      namespace: 'aws',
+      keys: ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
+    })
+    // Both keys must land — not just the first — even though stdout is a pipe.
+    expect(disabledKeys(dws, 'aws')).toEqual(['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'])
+  })
+
+  it('enable removes the keys and prunes the empty namespace', () => {
+    const dws = makeWorkspace(ITEMS)
+    runCli(['disable', 'aws', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'], dws)
+    const r = runCli(['enable', 'aws', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'], dws)
+    expect(r.code).toBe(0)
+    expect(disabledKeys(dws, 'aws')).toBeUndefined()
   })
 })
 
