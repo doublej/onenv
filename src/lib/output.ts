@@ -12,7 +12,10 @@ export function isJsonMode(): boolean {
 }
 
 export function output(data: unknown): void {
-  process.stdout.write(`${JSON.stringify(data, null, 2)}\n`)
+  // Compact single-line JSON (NDJSON-style): every structured payload — success
+  // envelopes, error objects, data dumps — is one line, so `head -1` / `tail -1`
+  // capture the whole thing instead of truncating a pretty-printed object to `}`.
+  process.stdout.write(`${JSON.stringify(data)}\n`)
 }
 
 export function success(message: string, data?: Record<string, unknown>): void {
