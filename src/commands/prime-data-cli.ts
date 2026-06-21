@@ -51,12 +51,12 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'disable <ns> <key...>',
       description:
-        'Mark keys as disabled in local state. They remain in 1Password but are excluded from export/run.',
+        'Mark keys as disabled in local machine-only state (state.json, not committed). They remain in 1Password but are excluded from FLAT ENV INJECTION ONLY (export and `run`\'s implicit project-wide inject). build-file and `run --file` still reassemble disabled keys. To keep a whole namespace out of flat injection in a versioned, shared way, prefer "fileOnlyNamespaces" in .onenv.json over per-key disable.',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,keys}.',
     },
     {
       name: 'enable <ns> <key...>',
-      description: 'Re-include previously disabled keys in export/run.',
+      description: 'Re-include previously disabled keys in flat env injection (export/run).',
       output: 'TTY: green confirmation. JSON: {ok:true,message,namespace,keys}.',
     },
     {
@@ -68,7 +68,7 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'run [--file <[ns/]group:VAR>...] [--file-rw <[ns/]group:VAR>...] -- <cmd...>',
       description:
-        'Read .onenv.json, fetch enabled secrets across all configured namespaces, exec <cmd> with secrets injected as env vars. Inherits stdio. --file (repeatable) materializes the JSON for a group into a 0600 tempfile under XDG_RUNTIME_DIR (fallback: os tmpdir), exposes its absolute path as the named env var, and removes the tempfile on child exit / SIGINT / SIGTERM. Spec accepts bare `group:VAR` (resolves uniquely across project namespaces) or explicit `namespace/group:VAR` (required when the same group name lives in multiple namespaces, e.g. per-account OAuth tokens). --file-rw behaves identically but also sha256-hashes the materialized file before exec and re-imports it into the same namespace+group on clean child close if the hash changed; writeback is skipped on signal exit, on read failure, or if the hash matches.',
+        'Read .onenv.json, fetch enabled secrets across all configured namespaces, exec <cmd> with secrets injected as env vars. Inherits stdio. Namespaces listed in .onenv.json "fileOnlyNamespaces" are SKIPPED by flat injection (and exempt from the cross-namespace collision check) but stay resolvable via --file — use this for per-account OAuth namespaces whose keys would otherwise collide. --file (repeatable) materializes the JSON for a group into a 0600 tempfile under XDG_RUNTIME_DIR (fallback: os tmpdir), exposes its absolute path as the named env var, and removes the tempfile on child exit / SIGINT / SIGTERM. Spec accepts bare `group:VAR` (resolves uniquely across project namespaces) or explicit `namespace/group:VAR` (required when the same group name lives in multiple namespaces, e.g. per-account OAuth tokens). --file-rw behaves identically but also sha256-hashes the materialized file before exec and re-imports it into the same namespace+group on clean child close if the hash changed; writeback is skipped on signal exit, on read failure, or if the hash matches.',
       output: 'Mirrors the child exit code. No onenv output written.',
     },
     {
@@ -161,7 +161,8 @@ export function buildState(): StateEntry[] {
     },
     {
       path: '<cwd>/.onenv.json',
-      description: 'Per-project config. Shape: {namespaces:string[]}. Created by "onenv init".',
+      description:
+        'Per-project config (committed). Shape: {namespaces:string[], fileOnlyNamespaces?:string[]}. fileOnlyNamespaces must be a subset of namespaces; those namespaces are excluded from flat env injection but remain available to --file/build-file. Created by "onenv init".',
     },
   ]
 }

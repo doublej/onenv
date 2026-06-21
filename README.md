@@ -139,8 +139,25 @@ materialized file before the child runs and re-imports it on clean exit only
 if the hash changed. Writeback is skipped on `SIGINT` / `SIGTERM` and on any
 read error, so a crashed child can't poison the vault.
 
-If the same group name lives in multiple project namespaces (e.g. one `token`
-group per OAuth account), disambiguate with `namespace/group:VAR`:
+### Per-account OAuth (one `token` group per account)
+
+When several namespaces hold the *same* leaf keys — e.g. one `token` group per
+Google account, each flattened to identical `ACCESS`/`REFRESH` keys — flat env
+injection can't merge them: two namespaces exporting the same bare key is a hard
+collision. Declare those namespaces `fileOnlyNamespaces` in `.onenv.json`. They
+are then skipped by `onenv run`'s flat injection (and its collision check) but
+remain fully materializable through `--file`:
+
+```json
+{
+  "namespaces": ["app", "gws-poolsuite", "gws-personal"],
+  "fileOnlyNamespaces": ["gws-poolsuite", "gws-personal"]
+}
+```
+
+`onenv run` now injects `app`'s keys as env vars and leaves the OAuth tokens to
+`--file`, disambiguated with `namespace/group:VAR` since the `token` group name
+is shared:
 
 ```bash
 onenv run \
@@ -148,6 +165,10 @@ onenv run \
   --file-rw gws-personal/token:GMAIL_TOKEN_PERSONAL \
   -- python3 mail_sync.py
 ```
+
+`fileOnlyNamespaces` must be a subset of `namespaces`. It's the versioned,
+intent-revealing replacement for machine-local `onenv disable` of the duplicated
+keys — the config travels with the repo, so every checkout works out of the box.
 
 ## Common commands
 

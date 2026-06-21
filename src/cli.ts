@@ -160,7 +160,12 @@ Examples:
   $ onenv disable aws AWS_OLD_KEY
       Stop exporting AWS_OLD_KEY without deleting it
   $ onenv disable aws AWS_OLD_KEY AWS_OLDER_KEY
-      Disable multiple keys at once`,
+      Disable multiple keys at once
+
+Note: disable excludes a key from flat env injection (run/export) only.
+build-file and "run --file" still reassemble it. To keep a whole namespace
+out of flat injection (e.g. per-account OAuth tokens consumed only via --file),
+add it to "fileOnlyNamespaces" in .onenv.json instead.`,
   )
 
 program

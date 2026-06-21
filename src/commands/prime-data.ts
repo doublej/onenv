@@ -136,7 +136,7 @@ export function buildPrimer(version: string, learnings: Learning[] = []): Primer
       key_regex: '^[A-Za-z_][A-Za-z0-9_]*$',
       key_max_length: 128,
       injection_warning:
-        'BARE KEYS: `export` and `run` inject keys without a namespace prefix as env vars. The same enabled key appearing in two merged namespaces is a hard VALIDATION error. Keep keys unique across namespaces you combine; resolve collisions by disabling the duplicate or splitting the namespaces.',
+        'BARE KEYS: `export` and `run` inject keys without a namespace prefix as env vars. The same enabled key appearing in two merged namespaces is a hard VALIDATION error. Resolve it by: (a) declaring a namespace consumed only via --file/build-file as "fileOnlyNamespaces" in .onenv.json — it is skipped by flat injection (and the collision check) but still materializable by --file; (b) `onenv disable <ns> <key>`, which excludes a key from FLAT INJECTION ONLY (build-file/--file still include it); or (c) renaming/removing the duplicate.',
     },
     refs: {
       description:
