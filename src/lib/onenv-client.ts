@@ -245,7 +245,6 @@ export interface GroupEntry {
 }
 
 const META_FIELD_IDS: Array<keyof ItemMeta> = ['group', 'path', 'type']
-const PARALLEL_OP_LIMIT = 10
 
 export async function setValue(namespace: string, key: string, value: string): Promise<void> {
   await setValueWithMeta(namespace, key, value, {})
@@ -324,14 +323,30 @@ function readMetaFromItem(item: OpItemDetail): { value: string } & ItemMeta {
   return { value, group, path, type }
 }
 
-type FullItem = { key: string; value: string } & ItemMeta
+export type FullItem = { key: string; value: string } & ItemMeta
 
-async function fetchAllItems(namespace: string): Promise<FullItem[]> {
-  const keys = await listKeys(namespace)
-  return await mapWithLimit(keys, PARALLEL_OP_LIMIT, async (key) => ({
-    key,
-    ...(await getItemWithMeta(namespace, key)),
-  }))
+export async function fetchAllItems(namespace: string): Promise<FullItem[]> {
+  const items = (await listItems(namespace)).filter(
+    (it) => parseTitle(it.title)?.namespace === namespace,
+  )
+  if (items.length === 0) return []
+
+  // Fetch every item in ONE `op item get -` call (id specifiers on stdin)
+  // instead of one `op item get` per key — the rate-limit-friendly path
+  // documented by op. Output order is not guaranteed, so match by title.
+  const stdin = JSON.stringify(items.map(({ id }) => ({ id })))
+  const raw = await runOp(['item', 'get', '-', '--vault', ONENV_VAULT, '--format', 'json'], stdin)
+  const parsed = JSON.parse(raw) as OpItemDetail | OpItemDetail[]
+  const details = Array.isArray(parsed) ? parsed : [parsed]
+
+  const out: FullItem[] = []
+  for (const detail of details) {
+    const title = typeof detail.title === 'string' ? detail.title : undefined
+    const parsedTitle = title ? parseTitle(title) : null
+    if (parsedTitle?.namespace !== namespace) continue
+    out.push({ key: parsedTitle.key, ...readMetaFromItem(detail) })
+  }
+  return out
 }
 
 export async function listItemsWithMeta(namespace: string): Promise<ItemSummary[]> {

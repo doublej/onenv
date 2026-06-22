@@ -5,6 +5,7 @@ vi.mock('./onenv-client.js', () => ({
   listNamespaces: vi.fn(),
   listKeys: vi.fn(),
   listItemsWithMeta: vi.fn(),
+  fetchAllItems: vi.fn(),
   listGroupEntries: vi.fn(),
   setValue: vi.fn(),
   setValueWithMeta: vi.fn(),
@@ -104,20 +105,15 @@ describe('exportEnabledValuesStrict', () => {
 
 describe('getNamespaceVarsWithFingerprints', () => {
   beforeEach(() => {
-    vi.mocked(onenvClient.listItemsWithMeta).mockReset()
-    vi.mocked(onenvClient.listValues).mockReset()
+    vi.mocked(onenvClient.fetchAllItems).mockReset()
     vi.mocked(stateStore.getDisabledMap).mockReset()
   })
 
   it('returns each key with its sha256 fingerprint and metadata', async () => {
-    vi.mocked(onenvClient.listItemsWithMeta).mockResolvedValue([
-      { key: 'AWS_KEY', group: 'aws', path: 'aws.key', type: 'string' },
-      { key: 'AWS_SECRET', group: 'aws', path: 'aws.secret', type: 'string' },
+    vi.mocked(onenvClient.fetchAllItems).mockResolvedValue([
+      { key: 'AWS_KEY', value: 'a', group: 'aws', path: 'aws.key', type: 'string' },
+      { key: 'AWS_SECRET', value: 'b', group: 'aws', path: 'aws.secret', type: 'string' },
     ])
-    vi.mocked(onenvClient.listValues).mockResolvedValue({
-      AWS_KEY: 'a',
-      AWS_SECRET: 'b',
-    })
     mockDisabled({ aws: ['AWS_SECRET'] })
 
     const result = await getNamespaceVarsWithFingerprints('aws')
@@ -142,10 +138,9 @@ describe('getNamespaceVarsWithFingerprints', () => {
   })
 
   it('never includes the raw value', async () => {
-    vi.mocked(onenvClient.listItemsWithMeta).mockResolvedValue([
-      { key: 'KEY', group: 'g', path: 'p', type: 'string' },
+    vi.mocked(onenvClient.fetchAllItems).mockResolvedValue([
+      { key: 'KEY', value: 'super-secret-value', group: 'g', path: 'p', type: 'string' },
     ])
-    vi.mocked(onenvClient.listValues).mockResolvedValue({ KEY: 'super-secret-value' })
     mockDisabled({})
 
     const result = await getNamespaceVarsWithFingerprints('ns')

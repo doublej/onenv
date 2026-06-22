@@ -1,6 +1,7 @@
 import { validationError } from './errors.js'
 import { fingerprint } from './fingerprint.js'
 import {
+  fetchAllItems,
   type GroupEntry,
   type ItemMeta,
   listGroupEntries,
@@ -97,20 +98,20 @@ export async function getNamespaceVarsWithMeta(namespace: string): Promise<Names
 }
 
 export async function getNamespaceVarsWithFingerprints(namespace: string): Promise<NamespaceVar[]> {
-  const [items, values, disabledMap] = await Promise.all([
-    listItemsWithMeta(namespace),
-    listValues(namespace),
-    getDisabledMap(),
-  ])
+  // fetchAllItems returns value + metadata in a single batched read, so we no
+  // longer need a separate listValues pass to compute fingerprints.
+  const [items, disabledMap] = await Promise.all([fetchAllItems(namespace), getDisabledMap()])
   const disabled = new Set(disabledMap[namespace] ?? [])
-  return items.map((it) => ({
-    key: it.key,
-    disabled: disabled.has(it.key),
-    group: it.group,
-    path: it.path,
-    type: it.type,
-    fingerprint: values[it.key] !== undefined ? fingerprint(values[it.key]) : undefined,
-  }))
+  return items
+    .map((it) => ({
+      key: it.key,
+      disabled: disabled.has(it.key),
+      group: it.group,
+      path: it.path,
+      type: it.type,
+      fingerprint: fingerprint(it.value),
+    }))
+    .sort((a, b) => a.key.localeCompare(b.key))
 }
 
 export async function getGroupEntries(namespace: string, group: string): Promise<GroupEntry[]> {

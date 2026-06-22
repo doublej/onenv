@@ -79,9 +79,19 @@ function itemList(args) {
 }
 
 function itemGet(args) {
-  const title = args[2]
-  const item = loadDb().find((it) => titleOf(it) === title)
-  if (!item) fail(`"${title}" isn't an item. Specify the item with its UUID, name, or domain.`)
+  const specifier = args[2]
+  const db = loadDb()
+  if (specifier === '-') {
+    // Batch form: `op item get -` reads a JSON array of {id} specifiers on stdin
+    // and returns an array of item details (see onenv-client.ts fetchAllItems).
+    const stdin = fs.readFileSync(0, 'utf-8').trim()
+    const specs = stdin ? JSON.parse(stdin) : []
+    const ids = new Set(specs.map((s) => s.id))
+    emit(db.filter((it) => ids.has(it.id)).map(toDetail))
+    return
+  }
+  const item = db.find((it) => titleOf(it) === specifier)
+  if (!item) fail(`"${specifier}" isn't an item. Specify the item with its UUID, name, or domain.`)
   emit(toDetail(item))
 }
 
