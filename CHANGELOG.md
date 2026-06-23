@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.9.0 — 2026-06-23
+
+### Added
+
+- **run**: add fileOnlyNamespaces to skip flat injection for file-only namespaces (8ca244f)
+- surface top learnings in the prime agent guide (00f563d)
+- add shared-memory learnings commands (08424cf)
+
+### Fixed
+
+- **run**: make cross-namespace collision hint accurate and actionable (d123070)
+- **output**: emit compact single-line JSON for structured output (43e625d)
+- write state/ref/token files atomically with fsync+rename (b4c7687)
+
+### Performance
+
+- **client**: batch op item get to cut request budget (454e537)
+
+### Docs
+
+- clarify disable semantics and document fileOnlyNamespaces (bdd1ee3)
+
+### Tests
+
+- **contract**: add disable/enable state persistence coverage (de58f69)
+- **contract**: add black-box CLI suite to catch backwards-compat breaks (35e3cfd)
+
 ## v0.8.0 — 2026-05-28
 
 ### Added
