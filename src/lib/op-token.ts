@@ -14,13 +14,24 @@ export function getTokenCachePath(): string {
 
 export async function ensureServiceAccountToken(): Promise<void> {
   const raw = process.env.OP_SERVICE_ACCOUNT_TOKEN
-  if (!raw?.startsWith('op://')) return
 
+  // A literal ops_ token is already in the env — op will use it directly.
+  if (raw && !raw.startsWith('op://')) return
+
+  // Env is either unset or an op:// reference. Prefer the cached literal so
+  // onenv stays headless even in env-less contexts (agents, subshells, cron)
+  // where a shell-profile export isn't present. The cache is the durable
+  // source of truth; a stale entry self-heals via clearTokenCache on auth
+  // failure (see onenv-client.ts).
   const cached = await readCache()
   if (cached) {
     process.env.OP_SERVICE_ACCOUNT_TOKEN = cached
     return
   }
+
+  // No cache. Only an op:// reference lets us resolve one; unset means the
+  // user has never authenticated, so fall through to interactive op.
+  if (!raw?.startsWith('op://')) return
 
   const resolved = await opRead(raw)
   process.env.OP_SERVICE_ACCOUNT_TOKEN = resolved
