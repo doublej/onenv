@@ -24,14 +24,17 @@ interface RawExternalItem {
 
 /**
  * Fetch a regular (non-onenv) item by title or ID. Unlike every other read,
- * this is NOT scoped to ONENV_VAULT — without --vault, op searches every
- * vault the current auth can see (a vault-scoped service account will only
- * find items in its own vault).
+ * this is NOT scoped to ONENV_VAULT, and it runs op WITHOUT the service
+ * account token: onenv injects OP_SERVICE_ACCOUNT_TOKEN at startup (cache
+ * included), and that vault-scoped account gets a 403 on every other vault.
+ * Stripping it makes op fall back to the user's own auth (desktop-app
+ * integration / `op signin`), which is the auth that can see the source item.
  */
 export async function getExternalItem(ref: string, vault?: string): Promise<ExternalItem> {
   const args = ['item', 'get', ref, '--format', 'json']
   if (vault) args.push('--vault', vault)
-  const item = JSON.parse(await runOp(args)) as RawExternalItem
+  const { OP_SERVICE_ACCOUNT_TOKEN: _omit, ...env } = process.env
+  const item = JSON.parse(await runOp(args, undefined, env)) as RawExternalItem
   const urls = item.urls ?? []
   return {
     title: typeof item.title === 'string' ? item.title : ref,

@@ -91,9 +91,10 @@ Examples:
   $ onenv explode github "GitHub" --prefix GH --overwrite
       Write GH_USERNAME, GH_PASSWORD, ... replacing existing keys
 
-Note: reads the source item with whatever op auth is active. A vault-scoped
-service account cannot see other vaults — run this once yourself (desktop-app
-auth); afterwards the agent sees the namespace like any other.
+Note: the source item is read with YOUR 1Password auth (desktop-app
+integration / op signin) — the onenv service-account token is ignored for
+this read, since that account only sees the onenv vault. Run this once
+yourself; afterwards agents see the namespace like any other.
 "
 `;
 

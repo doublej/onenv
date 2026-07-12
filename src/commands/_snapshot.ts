@@ -1,8 +1,8 @@
 import { CliError } from '../lib/errors.js'
+import { mapWithLimit } from '../lib/map-with-limit.js'
 import {
   getItemWithMeta,
   type ItemMeta,
-  mapWithLimit,
   setValueWithMeta,
   unsetValue,
 } from '../lib/onenv-client.js'

@@ -25,15 +25,23 @@ interface ExecResult {
   stderr: string
 }
 
-async function execOp(args: string[], stdin?: string): Promise<ExecResult> {
-  const result = await spawnOp(args, stdin)
+async function execOp(
+  args: string[],
+  stdin?: string,
+  env?: NodeJS.ProcessEnv,
+): Promise<ExecResult> {
+  const result = await spawnOp(args, stdin, env)
   if (result.code !== 0) await invalidateCacheOnAuthFailure(result.stderr)
   return result
 }
 
-async function spawnOp(args: string[], stdin?: string): Promise<ExecResult> {
+async function spawnOp(
+  args: string[],
+  stdin?: string,
+  env?: NodeJS.ProcessEnv,
+): Promise<ExecResult> {
   return await new Promise<ExecResult>((resolve, reject) => {
-    const child = spawn('op', args, { stdio: ['pipe', 'pipe', 'pipe'], env: process.env })
+    const child = spawn('op', args, { stdio: ['pipe', 'pipe', 'pipe'], env: env ?? process.env })
 
     let stdout = ''
     let stderr = ''
@@ -72,8 +80,12 @@ async function invalidateCacheOnAuthFailure(stderr: string): Promise<void> {
   if (isAuth) await clearTokenCache()
 }
 
-export async function runOp(args: string[], stdin?: string): Promise<string> {
-  const result = await execOp(args, stdin)
+export async function runOp(
+  args: string[],
+  stdin?: string,
+  env?: NodeJS.ProcessEnv,
+): Promise<string> {
+  const result = await execOp(args, stdin, env)
   if (result.code !== 0) {
     throw opError(result.stderr || result.stdout, args)
   }
@@ -365,24 +377,6 @@ export async function listGroupEntries(namespace: string, group: string): Promis
     )
     .map(({ key, value, path, type }) => ({ key, value, path, type }))
     .sort((a, b) => a.path.localeCompare(b.path))
-}
-
-export async function mapWithLimit<I, O>(
-  items: I[],
-  limit: number,
-  fn: (i: I) => Promise<O>,
-): Promise<O[]> {
-  const out: O[] = []
-  let cursor = 0
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (true) {
-      const i = cursor++
-      if (i >= items.length) return
-      out.push(await fn(items[i]))
-    }
-  })
-  await Promise.all(workers)
-  return out
 }
 
 export async function unsetValue(namespace: string, key: string): Promise<void> {
