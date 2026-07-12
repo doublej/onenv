@@ -65,11 +65,22 @@ describe('explodeItem', () => {
     const { explodeItem } = await import('./explode.js')
     const { item, rows } = await explodeItem('github', 'GitHub', {})
     expect(item).toBe('GitHub')
-    expect(rows.map((r) => r.key)).toEqual(['USERNAME', 'PASSWORD', 'URL'])
+    expect(rows.map((r) => r.key)).toEqual(['GITHUB_USERNAME', 'GITHUB_PASSWORD', 'GITHUB_URL'])
     expect(setValue).toHaveBeenCalledTimes(3)
-    expect(setValue).toHaveBeenCalledWith('github', 'USERNAME', 'jj')
-    expect(setValue).toHaveBeenCalledWith('github', 'PASSWORD', 's3cret')
-    expect(setValue).toHaveBeenCalledWith('github', 'URL', 'https://github.com')
+    expect(setValue).toHaveBeenCalledWith('github', 'GITHUB_USERNAME', 'jj')
+    expect(setValue).toHaveBeenCalledWith('github', 'GITHUB_PASSWORD', 's3cret')
+    expect(setValue).toHaveBeenCalledWith('github', 'GITHUB_URL', 'https://github.com')
+  })
+
+  it('sluggifies the item title for the default prefix', async () => {
+    getExternalItem.mockResolvedValue(loginItem({ title: 'My Bank (NL)' }))
+    const { explodeItem } = await import('./explode.js')
+    const { rows } = await explodeItem('bank', 'My Bank (NL)', { dryRun: true })
+    expect(rows.map((r) => r.key)).toEqual([
+      'MY_BANK_NL_USERNAME',
+      'MY_BANK_NL_PASSWORD',
+      'MY_BANK_NL_URL',
+    ])
   })
 
   it('passes the source vault through to getExternalItem', async () => {
@@ -86,13 +97,13 @@ describe('explodeItem', () => {
     expect(getItemWithMeta).not.toHaveBeenCalled()
   })
 
-  it('applies a prefix to all derived keys', async () => {
+  it('--prefix overrides the item-title prefix', async () => {
     const { explodeItem } = await import('./explode.js')
     const { rows } = await explodeItem('github', 'GitHub', { prefix: 'GH', dryRun: true })
     expect(rows.map((r) => r.key)).toEqual(['GH_USERNAME', 'GH_PASSWORD', 'GH_URL'])
   })
 
-  it('upper-snakes labels and guards digit-leading keys', async () => {
+  it('--prefix "" drops the prefix, upper-snakes labels, and guards digit-leading keys', async () => {
     getExternalItem.mockResolvedValue(
       loginItem({
         primaryUrl: undefined,
@@ -103,7 +114,7 @@ describe('explodeItem', () => {
       }),
     )
     const { explodeItem } = await import('./explode.js')
-    const { rows } = await explodeItem('github', 'GitHub', { dryRun: true })
+    const { rows } = await explodeItem('github', 'GitHub', { prefix: '', dryRun: true })
     expect(rows.map((r) => r.key)).toEqual(['API_KEY_READ_ONLY', '_2FA_SECRET'])
   })
 
@@ -124,22 +135,22 @@ describe('explodeItem', () => {
   it('rolls back on mid-write failure: restores prior values, deletes created keys', async () => {
     // USERNAME exists (restore), PASSWORD is new (delete), URL fails (never written)
     getItemWithMeta.mockImplementation(async (...args: unknown[]) => {
-      if (args[1] === 'USERNAME') return { value: 'oldUser' }
+      if (args[1] === 'GITHUB_USERNAME') return { value: 'oldUser' }
       throw notFound()
     })
     setValue.mockImplementation(async (...args: unknown[]) => {
-      if (args[1] === 'URL') throw new Error('write URL failed')
+      if (args[1] === 'GITHUB_URL') throw new Error('write URL failed')
     })
     const { explodeItem } = await import('./explode.js')
     await expect(explodeItem('github', 'GitHub', { overwrite: true })).rejects.toThrow(
       /write URL failed/,
     )
-    expect(setValueWithMeta).toHaveBeenCalledWith('github', 'USERNAME', 'oldUser', {
+    expect(setValueWithMeta).toHaveBeenCalledWith('github', 'GITHUB_USERNAME', 'oldUser', {
       group: undefined,
       path: undefined,
       type: undefined,
     })
-    expect(unsetValue).toHaveBeenCalledWith('github', 'PASSWORD')
+    expect(unsetValue).toHaveBeenCalledWith('github', 'GITHUB_PASSWORD')
   })
 
   it('errors on key collisions between fields', async () => {

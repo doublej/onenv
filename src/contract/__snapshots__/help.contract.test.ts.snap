@@ -77,19 +77,22 @@ Arguments:
 Options:
   --vault <name>         Vault holding the source item (default: search all
                          vaults)
-  -p, --prefix <prefix>  Prefix prepended to every derived key
+  -p, --prefix <prefix>  Key prefix (default: sluggified item title; pass "" for
+                         none)
   --dry-run              Print the explode plan without writing
   --overwrite            Overwrite existing keys; atomic rollback on failure
   -h, --help             display help for command
 
 Examples:
-  $ onenv explode github "GitHub" --vault Private
-      Copy the "GitHub" login's fields into the github namespace
-      (username → USERNAME, password → PASSWORD, primary website → URL)
-  $ onenv explode github "GitHub" --dry-run
+  $ onenv explode shazamap "AppleID" --vault Personal
+      Copy the "AppleID" login's fields into the shazamap namespace as
+      APPLEID_USERNAME, APPLEID_PASSWORD, APPLEID_URL, ...
+  $ onenv explode shazamap "AppleID" --dry-run
       Preview which keys would be created, without writing
-  $ onenv explode github "GitHub" --prefix GH --overwrite
-      Write GH_USERNAME, GH_PASSWORD, ... replacing existing keys
+  $ onenv explode shazamap "AppleID" --prefix APPLE --overwrite
+      Write APPLE_USERNAME, APPLE_PASSWORD, ... replacing existing keys
+  $ onenv explode shazamap "AppleID" --prefix ""
+      Bare keys without the item prefix: USERNAME, PASSWORD, ...
 
 Note: the source item is read with YOUR 1Password auth (desktop-app
 integration / op signin) — the onenv service-account token is ignored for

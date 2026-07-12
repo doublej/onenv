@@ -36,7 +36,10 @@ export async function explodeItem(
   opts: ExplodeOptions,
 ): Promise<{ item: string; rows: ExplodePlanRow[] }> {
   const item = await getExternalItem(itemRef, opts.vault)
-  const entries = planEntries(item, opts.prefix ?? '')
+  // Keys are <ITEM>_<FIELD> by default so several exploded items can share a
+  // namespace; --prefix overrides the item part ("" drops it entirely).
+  const prefix = opts.prefix ?? deriveKey(item.title, '')
+  const entries = planEntries(item, prefix)
   if (entries.length === 0) {
     throw validationError(
       `Item "${item.title}" has no usable fields`,
@@ -163,7 +166,10 @@ export function registerExplodeCommand(program: Command): void {
     .argument('<namespace>', 'Target namespace (supports @refs)')
     .argument('<item>', 'Source item title or ID (any vault your op auth can see)')
     .option('--vault <name>', 'Vault holding the source item (default: search all vaults)')
-    .option('-p, --prefix <prefix>', 'Prefix prepended to every derived key')
+    .option(
+      '-p, --prefix <prefix>',
+      'Key prefix (default: sluggified item title; pass "" for none)',
+    )
     .option('--dry-run', 'Print the explode plan without writing')
     .option('--overwrite', 'Overwrite existing keys; atomic rollback on failure')
     .action(explodeAction)
@@ -171,13 +177,15 @@ export function registerExplodeCommand(program: Command): void {
       'after',
       `
 Examples:
-  $ onenv explode github "GitHub" --vault Private
-      Copy the "GitHub" login's fields into the github namespace
-      (username → USERNAME, password → PASSWORD, primary website → URL)
-  $ onenv explode github "GitHub" --dry-run
+  $ onenv explode shazamap "AppleID" --vault Personal
+      Copy the "AppleID" login's fields into the shazamap namespace as
+      APPLEID_USERNAME, APPLEID_PASSWORD, APPLEID_URL, ...
+  $ onenv explode shazamap "AppleID" --dry-run
       Preview which keys would be created, without writing
-  $ onenv explode github "GitHub" --prefix GH --overwrite
-      Write GH_USERNAME, GH_PASSWORD, ... replacing existing keys
+  $ onenv explode shazamap "AppleID" --prefix APPLE --overwrite
+      Write APPLE_USERNAME, APPLE_PASSWORD, ... replacing existing keys
+  $ onenv explode shazamap "AppleID" --prefix ""
+      Bare keys without the item prefix: USERNAME, PASSWORD, ...
 
 Note: the source item is read with YOUR 1Password auth (desktop-app
 integration / op signin) — the onenv service-account token is ignored for
