@@ -72,7 +72,7 @@ async function invalidateCacheOnAuthFailure(stderr: string): Promise<void> {
   if (isAuth) await clearTokenCache()
 }
 
-async function runOp(args: string[], stdin?: string): Promise<string> {
+export async function runOp(args: string[], stdin?: string): Promise<string> {
   const result = await execOp(args, stdin)
   if (result.code !== 0) {
     throw opError(result.stderr || result.stdout, args)

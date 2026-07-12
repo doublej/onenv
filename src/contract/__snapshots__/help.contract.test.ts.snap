@@ -32,6 +32,7 @@ Commands:
   disable <namespace> <keys...>                  Disable one or more variables without deleting
   enable <namespace> <keys...>                   Re-enable one or more previously disabled variables
   import [options] <namespace> [file]            Flatten a JSON file (or stdin) into onenv keys with reassembly metadata
+  explode [options] <namespace> <item>           Explode a regular 1Password item (e.g. a Login) into namespace keys
   migrate                                        Migrate an existing codebase to onenv
   learn [text...]                                Record a reusable onenv learning for future agents (shared memory)
   vote <id> <dir>                                Vote up or down on a learning (see \`onenv learnings\`)
@@ -60,6 +61,39 @@ Examples:
       Print the agent primer (full CLI + API contract)
 
 Run \`onenv <command> --help\` for command-specific examples.
+"
+`;
+
+exports[`help text contract > onenv explode --help 1`] = `
+"Usage: onenv explode [options] <namespace> <item>
+
+Explode a regular 1Password item (e.g. a Login) into namespace keys
+
+Arguments:
+  namespace              Target namespace (supports @refs)
+  item                   Source item title or ID (any vault your op auth can
+                         see)
+
+Options:
+  --vault <name>         Vault holding the source item (default: search all
+                         vaults)
+  -p, --prefix <prefix>  Prefix prepended to every derived key
+  --dry-run              Print the explode plan without writing
+  --overwrite            Overwrite existing keys; atomic rollback on failure
+  -h, --help             display help for command
+
+Examples:
+  $ onenv explode github "GitHub" --vault Private
+      Copy the "GitHub" login's fields into the github namespace
+      (username → USERNAME, password → PASSWORD, primary website → URL)
+  $ onenv explode github "GitHub" --dry-run
+      Preview which keys would be created, without writing
+  $ onenv explode github "GitHub" --prefix GH --overwrite
+      Write GH_USERNAME, GH_PASSWORD, ... replacing existing keys
+
+Note: reads the source item with whatever op auth is active. A vault-scoped
+service account cannot see other vaults — run this once yourself (desktop-app
+auth); afterwards the agent sees the namespace like any other.
 "
 `;
 

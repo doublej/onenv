@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process'
 import { CliError } from './errors.js'
 
-export type MutationAction = 'set' | 'edit' | 'unset' | 'import'
+export type MutationAction = 'set' | 'edit' | 'unset' | 'import' | 'explode'
 
 export interface ConfirmOptions {
   action: MutationAction

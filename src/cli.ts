@@ -6,6 +6,7 @@ import { buildFile } from './commands/build-file.js'
 import { registerCheckCommand } from './commands/check.js'
 import { registerDoctorCommand } from './commands/doctor.js'
 import { registerEditCommand } from './commands/edit.js'
+import { registerExplodeCommand } from './commands/explode.js'
 import { registerExportCommand } from './commands/export.js'
 import { registerGetCommand } from './commands/get.js'
 import { ROOT_HELP_EXAMPLES } from './commands/help-examples.js'
@@ -194,6 +195,7 @@ Examples:
   )
 
 registerImportCommand(program)
+registerExplodeCommand(program)
 registerMigrateCommand(program)
 registerLearnCommands(program)
 

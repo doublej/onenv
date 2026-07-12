@@ -49,7 +49,7 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 
 ### Source layout
 
-- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, doctor, disable, enable, import, migrate, build-file, init, run, export.
+- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, doctor, disable, enable, import, explode, migrate, build-file, init, run, export.
 - `src/commands/set.ts` / `edit.ts` / `unset.ts` / `get.ts` / `check.ts` — extracted single-key commands (each exports an action + `registerXCommand`)
 - `src/commands/_prompt.ts` — `assertValue`, `readValueFromPrompt`, `readValueFromStdin` shared by `set` and `edit`
 - `src/commands/tui.ts` — interactive @clack/prompts TUI loop
@@ -57,8 +57,11 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - `src/commands/prime-data.ts` + `prime-data-cli.ts` — primer data shape; `prime-detect.ts` builds the gated cwd snapshot
 - `src/commands/prime-xml.ts` / `prime-md.ts` — XML and Markdown renderers; `prime-logo.ts` holds the ASCII key banner
 - `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback and `--from-stdin`
+- `src/commands/explode.ts` — copy a regular 1Password item (e.g. a Login, read with the current op auth from any vault) into managed namespace keys; supports `--vault`, `--prefix`, `--dry-run`, atomic `--overwrite`
+- `src/commands/_snapshot.ts` — snapshot/rollback helpers shared by `import` and `explode`
 - `src/commands/build-file.ts` — reassemble a grouped JSON file from stored leaves
 - `src/commands/run-files.ts` — `--file group:VAR` materialization + child-process cleanup helpers
+- `src/lib/external-item.ts` — fetch a regular (non-onenv) 1Password item by title/ID, unscoped from `ONENV_VAULT`; consumed by `explode`
 - `src/lib/fingerprint.ts` — `sha256:<hex>` helper used by `get --fingerprint` and `check`
 - `src/lib/json-flatten.ts` — pure flatten/unflatten with empty-container sentinels
 - `src/lib/materialize.ts` — write rebuilt JSON to a `0600` tempfile under `XDG_RUNTIME_DIR`

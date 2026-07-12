@@ -13,7 +13,13 @@ beforeAll(() => {
 }, 60_000)
 
 describe('help text contract', () => {
-  for (const cmd of [['--help'], ['export', '--help'], ['get', '--help'], ['list', '--help']]) {
+  for (const cmd of [
+    ['--help'],
+    ['explode', '--help'],
+    ['export', '--help'],
+    ['get', '--help'],
+    ['list', '--help'],
+  ]) {
     it(`onenv ${cmd.join(' ')}`, () => {
       const r = runCli(cmd, ws)
       expect(r.code).toBe(0)

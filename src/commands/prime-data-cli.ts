@@ -79,6 +79,13 @@ export function buildCommands(): CommandSpec[] {
         'TTY: green confirmation. JSON: dry-run → {namespace, group, plan:[{key,path,type}]}. Otherwise → {ok:true,message,namespace,group,count}.',
     },
     {
+      name: 'explode <ns> <item> [--vault <name>] [--prefix <s>] [--overwrite] [--dry-run]',
+      description:
+        'Copy a regular 1Password item (e.g. a website Login) into managed namespace keys. Reads <item> by title or ID with the CURRENT op auth — without --vault it searches every vault that auth can see, so a vault-scoped service account only finds items in its own vault (a human typically runs this once with desktop-app auth). Each non-empty field becomes <ns>/KEY with the label upper-snaked ("username" → USERNAME, "password" → PASSWORD); the primary website URL becomes URL; notes are skipped. --prefix prepends a value to every derived key. Without --overwrite, aborts if any target key already exists. --overwrite replaces atomically: either every write lands, or every touched key is restored on failure. --dry-run prints the plan without writing.',
+      output:
+        'TTY: green confirmation. JSON: dry-run → {namespace, item, plan:[{key,field,type}]}. Otherwise → {ok:true,message,namespace,item,keys}.',
+    },
+    {
       name: 'build-file <ns> --group <name> [--out <path>] [--indent <n>]',
       description:
         'Reassemble a grouped JSON file from onenv keys. Sorts entries by stored path, walks the type field to cast each leaf back to its JSON type, and reconstructs nested objects/arrays (including empty containers via sentinels). Errors loudly on missing array indices or type mismatches.',
