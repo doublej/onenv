@@ -1,20 +1,15 @@
 import { readFileSync } from 'node:fs'
 import { text } from 'node:stream/consumers'
 import type { Command } from 'commander'
-import { CliError, validationError } from '../lib/errors.js'
+import { validationError } from '../lib/errors.js'
 import { type FlatEntry, flatten } from '../lib/json-flatten.js'
-import {
-  getItemWithMeta,
-  type ItemMeta,
-  mapWithLimit,
-  setValueWithMeta,
-  unsetValue,
-} from '../lib/onenv-client.js'
+import { setValueWithMeta } from '../lib/onenv-client.js'
 import { output, success } from '../lib/output.js'
 import { confirmMutation } from '../lib/permission.js'
 import { resolveRef, storeRefs } from '../lib/ref-store.js'
 import type { JsonLeafType } from '../lib/types.js'
 import { validateKey, validateNamespace } from '../lib/validation.js'
+import { fetchSnapshot, rollback, type SnapshotEntry } from './_snapshot.js'
 
 export type KeyStrategy = 'upper-snake' | 'leaf'
 
@@ -31,14 +26,6 @@ export interface ImportPlanRow {
   key: string
   path: string
   type: JsonLeafType
-}
-
-const SNAPSHOT_PARALLEL_LIMIT = 10
-
-interface SnapshotEntry {
-  key: string
-  existed: boolean
-  prior?: { value: string } & ItemMeta
 }
 
 /**
@@ -86,7 +73,7 @@ export async function importJsonFile(
       written.push(rows[i].key)
     }
   } catch (err) {
-    await rollback(namespace, snapshot, written, err)
+    await rollback(namespace, snapshot, written, err, 'import')
     throw err
   }
   return { group: opts.group, rows }
@@ -135,20 +122,6 @@ function planRows(
   return { entries, rows }
 }
 
-async function fetchSnapshot(namespace: string, keys: string[]): Promise<SnapshotEntry[]> {
-  return await mapWithLimit(keys, SNAPSHOT_PARALLEL_LIMIT, async (key) => {
-    try {
-      const prior = await getItemWithMeta(namespace, key)
-      return { key, existed: true, prior }
-    } catch (err) {
-      if (err instanceof CliError && err.code === 'NOT_FOUND') {
-        return { key, existed: false }
-      }
-      throw err
-    }
-  })
-}
-
 function validateAgainstSnapshot(
   snapshot: SnapshotEntry[],
   namespace: string,
@@ -170,39 +143,6 @@ function validateAgainstSnapshot(
         'Pick a different namespace, unset the existing key, or pass --overwrite',
       )
     }
-  }
-}
-
-async function rollback(
-  namespace: string,
-  snapshot: SnapshotEntry[],
-  written: string[],
-  originalErr: unknown,
-): Promise<void> {
-  const byKey = new Map(snapshot.map((s) => [s.key, s]))
-  const rollbackErrs: unknown[] = []
-  for (const key of written) {
-    const snap = byKey.get(key)
-    try {
-      if (snap?.existed && snap.prior) {
-        await setValueWithMeta(namespace, key, snap.prior.value, {
-          group: snap.prior.group,
-          path: snap.prior.path,
-          type: snap.prior.type,
-        })
-      } else {
-        await unsetValue(namespace, key)
-      }
-    } catch (e) {
-      rollbackErrs.push(e)
-    }
-  }
-  if (rollbackErrs.length > 0) {
-    const origMsg = originalErr instanceof Error ? originalErr.message : String(originalErr)
-    const detail = rollbackErrs.map((e) => (e instanceof Error ? e.message : String(e))).join('; ')
-    process.stderr.write(
-      `[onenv] rollback after import failure had errors. Original: ${origMsg}. Rollback errors: ${detail}\n`,
-    )
   }
 }
 
