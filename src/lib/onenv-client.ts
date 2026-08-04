@@ -7,7 +7,7 @@ import { CliError, opError } from './errors.js'
 import { clearTokenCache } from './op-token.js'
 import type { JsonLeafType } from './types.js'
 
-const ONENV_VAULT = process.env.ONENV_VAULT ?? 'onenv'
+export const ONENV_VAULT = process.env.ONENV_VAULT ?? 'onenv'
 const ONENV_CATEGORY = process.env.ONENV_CATEGORY ?? 'API Credential'
 const TAG_PREFIX = 'onenv:'
 

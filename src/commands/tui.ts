@@ -5,27 +5,15 @@ import {
   disableVar,
   editVar,
   enableVar,
-  getNamespaces,
   getNamespaceVarsWithValues,
   removeVar,
 } from '../lib/manager-service.js'
 import type { NamespaceVar } from '../lib/types.js'
-import { validateKey, validateNamespace } from '../lib/validation.js'
+import { validateKey } from '../lib/validation.js'
+import { chooseNamespace, expectValue } from './_prompts.js'
+import { runExplodeTui } from './explode-tui.js'
 
-type Action = 'set' | 'edit' | 'unset' | 'disable' | 'enable' | 'switch' | 'exit'
-
-function expectPromptString(value: unknown): string {
-  if (p.isCancel(value)) {
-    p.cancel('Cancelled')
-    process.exit(0)
-  }
-
-  if (typeof value !== 'string') {
-    throw new Error('Prompt returned unexpected value')
-  }
-
-  return value
-}
+type Action = 'set' | 'edit' | 'unset' | 'disable' | 'enable' | 'explode' | 'switch' | 'exit'
 
 function formatRows(vars: NamespaceVar[]): string {
   if (vars.length === 0) {
@@ -44,36 +32,6 @@ function formatRows(vars: NamespaceVar[]): string {
   return rows.join('\n')
 }
 
-async function chooseNamespace(): Promise<string> {
-  const namespaces = await getNamespaces()
-  const selected = expectPromptString(
-    await p.select({
-      message: 'Select a namespace',
-      options: [
-        ...namespaces.map((name) => ({ label: name, value: name })),
-        { label: 'Create new namespace', value: '__new__' },
-      ],
-      initialValue: namespaces[0] ?? '__new__',
-    }),
-  )
-
-  if (selected !== '__new__') {
-    return validateNamespace(selected)
-  }
-
-  const created = expectPromptString(
-    await p.text({
-      message: 'Namespace name',
-      placeholder: 'project-name',
-      validate(value) {
-        return value && value.trim().length > 0 ? undefined : 'Namespace is required'
-      },
-    }),
-  )
-
-  return validateNamespace(created)
-}
-
 async function chooseVar(namespace: string, action: string): Promise<string | null> {
   const vars = await getNamespaceVarsWithValues(namespace)
   if (vars.length === 0) {
@@ -81,7 +39,7 @@ async function chooseVar(namespace: string, action: string): Promise<string | nu
     return null
   }
 
-  return expectPromptString(
+  return expectValue<string>(
     await p.select({
       message: `${action}: pick a variable`,
       options: vars.map((item) => ({
@@ -93,7 +51,7 @@ async function chooseVar(namespace: string, action: string): Promise<string | nu
 }
 
 async function promptSecret(message: string): Promise<string> {
-  return expectPromptString(
+  return expectValue<string>(
     await p.password({
       message,
       mask: '•',
@@ -112,7 +70,7 @@ async function printNamespace(namespace: string): Promise<void> {
 
 async function handleSet(namespace: string): Promise<void> {
   const key = validateKey(
-    expectPromptString(
+    expectValue<string>(
       await p.text({
         message: 'Variable name',
         placeholder: 'AWS_SECRET_ACCESS_KEY',
@@ -173,7 +131,7 @@ async function handleDisable(namespace: string): Promise<void> {
     return
   }
 
-  const key = expectPromptString(
+  const key = expectValue<string>(
     await p.select({
       message: 'Disable: pick a variable',
       options: enabled.map((item) => ({ label: item.key, value: item.key })),
@@ -193,7 +151,7 @@ async function handleEnable(namespace: string): Promise<void> {
     return
   }
 
-  const key = expectPromptString(
+  const key = expectValue<string>(
     await p.select({
       message: 'Enable: pick a variable',
       options: disabled.map((item) => ({ label: item.key, value: item.key })),
@@ -211,6 +169,7 @@ async function executeAction(namespace: string, action: Action): Promise<string>
     unset: async () => await handleUnset(namespace),
     disable: async () => await handleDisable(namespace),
     enable: async () => await handleEnable(namespace),
+    explode: async () => await runExplodeTui({ namespace }),
   }
 
   if (action === 'switch') {
@@ -226,7 +185,7 @@ async function executeAction(namespace: string, action: Action): Promise<string>
 }
 
 async function chooseAction(): Promise<Action> {
-  return expectPromptString(
+  return expectValue<string>(
     await p.select({
       message: 'What do you want to do?',
       options: [
@@ -235,6 +194,7 @@ async function chooseAction(): Promise<Action> {
         { label: 'Unset variable', value: 'unset' },
         { label: 'Disable variable', value: 'disable' },
         { label: 'Enable variable', value: 'enable' },
+        { label: 'Explode a 1Password item into this namespace', value: 'explode' },
         { label: 'Switch namespace', value: 'switch' },
         { label: 'Exit', value: 'exit' },
       ],

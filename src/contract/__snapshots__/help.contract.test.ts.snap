@@ -32,7 +32,7 @@ Commands:
   disable <namespace> <keys...>                  Disable one or more variables without deleting
   enable <namespace> <keys...>                   Re-enable one or more previously disabled variables
   import [options] <namespace> [file]            Flatten a JSON file (or stdin) into onenv keys with reassembly metadata
-  explode [options] <namespace> <item>           Explode a regular 1Password item (e.g. a Login) into namespace keys
+  explode [options] [namespace] [item]           Explode a regular 1Password item (e.g. a Login) into namespace keys
   migrate                                        Migrate an existing codebase to onenv
   learn [text...]                                Record a reusable onenv learning for future agents (shared memory)
   vote <id> <dir>                                Vote up or down on a learning (see \`onenv learnings\`)
@@ -65,16 +65,18 @@ Run \`onenv <command> --help\` for command-specific examples.
 `;
 
 exports[`help text contract > onenv explode --help 1`] = `
-"Usage: onenv explode [options] <namespace> <item>
+"Usage: onenv explode [options] [namespace] [item]
 
 Explode a regular 1Password item (e.g. a Login) into namespace keys
 
 Arguments:
-  namespace              Target namespace (supports @refs)
+  namespace              Target namespace (supports @refs); omit for the
+                         interactive picker
   item                   Source item title or ID (any vault your op auth can
                          see)
 
 Options:
+  -i, --interactive      Force the guided TUI (fuzzy item search + plan preview)
   --vault <name>         Vault holding the source item (default: search all
                          vaults)
   -p, --prefix <prefix>  Key prefix (default: sluggified item title; pass "" for
@@ -84,6 +86,11 @@ Options:
   -h, --help             display help for command
 
 Examples:
+  $ onenv explode
+      Guided TUI: fuzzy-search your 1Password items, pick a target namespace,
+      preview the keys, then write them (TTY only)
+  $ onenv explode shazamap
+      Same TUI, with the target namespace already fixed
   $ onenv explode shazamap "AppleID" --vault Personal
       Copy the "AppleID" login's fields into the shazamap namespace as
       APPLEID_USERNAME, APPLEID_PASSWORD, APPLEID_URL, ...

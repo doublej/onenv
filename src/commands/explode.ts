@@ -21,34 +21,46 @@ export interface ExplodePlanRow {
   type: string
 }
 
-interface PlanEntry extends ExplodePlanRow {
+export interface PlanEntry extends ExplodePlanRow {
   value: string
 }
 
+/** The <ITEM> part of the default <ITEM>_<FIELD> key naming. */
+export function deriveItemPrefix(title: string): string {
+  return deriveKey(title, '')
+}
+
 /**
- * Explode a regular 1Password item (e.g. a website Login) into managed
- * namespace keys. Same atomicity contract as import: either every key ends
- * up with the new value, or every touched key is restored on failure.
+ * Turn a fetched item into the list of keys it would produce. Keys are
+ * <ITEM>_<FIELD> by default so several exploded items can share a namespace;
+ * an explicit prefix overrides the item part ("" drops it entirely).
  */
-export async function explodeItem(
-  namespace: string,
-  itemRef: string,
-  opts: ExplodeOptions,
-): Promise<{ item: string; rows: ExplodePlanRow[] }> {
-  const item = await getExternalItem(itemRef, opts.vault)
-  // Keys are <ITEM>_<FIELD> by default so several exploded items can share a
-  // namespace; --prefix overrides the item part ("" drops it entirely).
-  const prefix = opts.prefix ?? deriveKey(item.title, '')
-  const entries = planEntries(item, prefix)
+export function buildExplodePlan(item: ExternalItem, prefix?: string): PlanEntry[] {
+  const entries = planEntries(item, prefix ?? deriveItemPrefix(item.title))
   if (entries.length === 0) {
     throw validationError(
       `Item "${item.title}" has no usable fields`,
       'Only non-empty fields and the primary URL are exploded; notes are skipped',
     )
   }
-  const rows = entries.map(({ key, field, type }) => ({ key, field, type }))
-  if (opts.dryRun) return { item: item.title, rows }
+  return entries
+}
 
+export interface WritePlanOptions {
+  itemTitle: string
+  overwrite?: boolean
+  onProgress?: (key: string, index: number, total: number) => void
+}
+
+/**
+ * Write a plan. Same atomicity contract as import: either every key ends up
+ * with the new value, or every touched key is restored on failure.
+ */
+export async function writeExplodePlan(
+  namespace: string,
+  entries: PlanEntry[],
+  opts: WritePlanOptions,
+): Promise<void> {
   const snapshot = await fetchSnapshot(
     namespace,
     entries.map((e) => e.key),
@@ -66,12 +78,13 @@ export async function explodeItem(
   await confirmMutation({
     action: 'explode',
     namespace,
-    details: `item=${item.title} keys=${entries.length}`,
+    details: `item=${opts.itemTitle} keys=${entries.length}`,
   })
 
   const written: string[] = []
   try {
-    for (const entry of entries) {
+    for (const [index, entry] of entries.entries()) {
+      opts.onProgress?.(entry.key, index, entries.length)
       await setValue(namespace, entry.key, entry.value)
       written.push(entry.key)
     }
@@ -79,6 +92,22 @@ export async function explodeItem(
     await rollback(namespace, snapshot, written, err, 'explode')
     throw err
   }
+}
+
+export async function explodeItem(
+  namespace: string,
+  itemRef: string,
+  opts: ExplodeOptions,
+): Promise<{ item: string; rows: ExplodePlanRow[] }> {
+  const item = await getExternalItem(itemRef, opts.vault)
+  const entries = buildExplodePlan(item, opts.prefix)
+  const rows = entries.map(({ key, field, type }) => ({ key, field, type }))
+  if (opts.dryRun) return { item: item.title, rows }
+
+  await writeExplodePlan(namespace, entries, {
+    itemTitle: item.title,
+    overwrite: opts.overwrite,
+  })
   return { item: item.title, rows }
 }
 
@@ -138,14 +167,19 @@ interface ExplodeCliOptions {
   prefix?: string
   dryRun?: boolean
   overwrite?: boolean
+  interactive?: boolean
 }
 
 async function explodeAction(
-  rawNamespace: string,
-  itemRef: string,
+  rawNamespace: string | undefined,
+  itemRef: string | undefined,
   options: ExplodeCliOptions,
 ): Promise<void> {
-  const namespace = validateNamespace(await resolveRef(rawNamespace))
+  if (options.interactive || !itemRef) {
+    await runInteractiveExplode(rawNamespace, itemRef, options)
+    return
+  }
+  const namespace = validateNamespace(await resolveRef(rawNamespace as string))
   const result = await explodeItem(namespace, itemRef, options)
   await storeRefs([namespace])
   if (options.dryRun) {
@@ -159,12 +193,39 @@ async function explodeAction(
   })
 }
 
+/**
+ * Guided flow for humans: fuzzy-pick the item, preview the plan, then write.
+ * Loaded lazily so the scriptable path never pays for the prompt library.
+ */
+async function runInteractiveExplode(
+  rawNamespace: string | undefined,
+  itemRef: string | undefined,
+  options: ExplodeCliOptions,
+): Promise<void> {
+  if (itemRef) {
+    throw validationError(
+      '--interactive does not take an <item> argument',
+      'Run "onenv explode [namespace]" to pick the item interactively, or drop --interactive',
+    )
+  }
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw validationError(
+      'onenv explode requires <namespace> and <item> when not attached to a terminal',
+      'Non-interactive usage: onenv explode <namespace> <item> [--vault <name>] [--prefix <s>]',
+    )
+  }
+  const namespace = rawNamespace ? validateNamespace(await resolveRef(rawNamespace)) : undefined
+  const { runExplodeTui } = await import('./explode-tui.js')
+  await runExplodeTui({ vault: options.vault, namespace })
+}
+
 export function registerExplodeCommand(program: Command): void {
   program
     .command('explode')
     .description('Explode a regular 1Password item (e.g. a Login) into namespace keys')
-    .argument('<namespace>', 'Target namespace (supports @refs)')
-    .argument('<item>', 'Source item title or ID (any vault your op auth can see)')
+    .argument('[namespace]', 'Target namespace (supports @refs); omit for the interactive picker')
+    .argument('[item]', 'Source item title or ID (any vault your op auth can see)')
+    .option('-i, --interactive', 'Force the guided TUI (fuzzy item search + plan preview)')
     .option('--vault <name>', 'Vault holding the source item (default: search all vaults)')
     .option(
       '-p, --prefix <prefix>',
@@ -177,6 +238,11 @@ export function registerExplodeCommand(program: Command): void {
       'after',
       `
 Examples:
+  $ onenv explode
+      Guided TUI: fuzzy-search your 1Password items, pick a target namespace,
+      preview the keys, then write them (TTY only)
+  $ onenv explode shazamap
+      Same TUI, with the target namespace already fixed
   $ onenv explode shazamap "AppleID" --vault Personal
       Copy the "AppleID" login's fields into the shazamap namespace as
       APPLEID_USERNAME, APPLEID_PASSWORD, APPLEID_URL, ...
