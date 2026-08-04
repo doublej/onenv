@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.10.0 — 2026-08-04
+
+### Added
+
+- **completion**: shell completions for zsh, bash, and fish (be164c9)
+- **explode**: let the TUI pick which keys to write (d3b9adb)
+- **tui**: multi-select unset, namespace removal, clearer destructive labels (b4293fc)
+- **explode**: guided TUI with fuzzy item search (7144aba)
+- **explode**: list 1Password items with the user auth for pickers (138e041)
+- **explode**: default key prefix to the sluggified item title (4fda77c)
+- **explode**: copy a regular 1Password item into namespace keys (fb8c45f)
+
+### Fixed
+
+- **explode**: read the source item with user auth, not the service account (d8ffb83)
+- **auth**: fall back to cached token when env var is unset (31fb1b9)
+
+### Changed
+
+- **import**: extract snapshot/rollback helpers into _snapshot (749dc90)
+
+### Tests
+
+- **explode**: cover the interactive plan loop (3276aaa)
+
 ## v0.9.0 — 2026-06-23
 
 ### Added

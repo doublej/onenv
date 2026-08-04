@@ -1,6 +1,6 @@
 {
   "name": "onenv",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "1Password-backed environment variable manager. Replaces .env files.",
   "author": "Jurre-Jan Smit",
   "type": "module",
