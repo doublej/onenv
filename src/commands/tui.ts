@@ -5,6 +5,7 @@ import {
   disableVar,
   editVar,
   enableVar,
+  getNamespaceVars,
   getNamespaceVarsWithValues,
   removeVar,
 } from '../lib/manager-service.js'
@@ -13,7 +14,16 @@ import { validateKey } from '../lib/validation.js'
 import { chooseNamespace, expectValue } from './_prompts.js'
 import { runExplodeTui } from './explode-tui.js'
 
-type Action = 'set' | 'edit' | 'unset' | 'disable' | 'enable' | 'explode' | 'switch' | 'exit'
+type Action =
+  | 'set'
+  | 'edit'
+  | 'unset'
+  | 'disable'
+  | 'enable'
+  | 'explode'
+  | 'switch'
+  | 'remove-namespace'
+  | 'exit'
 
 function formatRows(vars: NamespaceVar[]): string {
   if (vars.length === 0) {
@@ -97,16 +107,8 @@ async function handleEdit(namespace: string): Promise<void> {
   p.log.success(`Updated ${namespace}.${key}`)
 }
 
-async function handleUnset(namespace: string): Promise<void> {
-  const key = await chooseVar(namespace, 'Unset')
-  if (!key) {
-    return
-  }
-
-  const confirmed = await p.confirm({
-    message: `Remove ${namespace}.${key} from 1Password?`,
-    initialValue: false,
-  })
+async function confirmOrSkip(message: string): Promise<boolean> {
+  const confirmed = await p.confirm({ message, initialValue: false })
 
   if (p.isCancel(confirmed)) {
     p.cancel('Cancelled')
@@ -115,11 +117,84 @@ async function handleUnset(namespace: string): Promise<void> {
 
   if (!confirmed) {
     p.log.info('Skipped')
+    return false
+  }
+
+  return true
+}
+
+async function handleUnset(namespace: string): Promise<void> {
+  const vars = await getNamespaceVarsWithValues(namespace)
+  if (vars.length === 0) {
+    p.log.warn('No variables found in this namespace.')
     return
   }
 
-  await removeVar(namespace, key)
-  p.log.success(`Unset ${namespace}.${key}`)
+  const keys = expectValue<string[]>(
+    await p.multiselect({
+      message: 'Unset: pick variables to delete permanently from 1Password',
+      options: vars.map((item) => ({
+        value: item.key,
+        label: item.key,
+        hint: item.disabled ? 'disabled' : undefined,
+      })),
+      required: true,
+    }),
+  )
+
+  const proceed = await confirmOrSkip(
+    `Delete ${keys.length} variable(s) from 1Password? This cannot be undone. (${keys.join(', ')})`,
+  )
+  if (!proceed) {
+    return
+  }
+
+  for (const key of keys) {
+    await removeVar(namespace, key)
+  }
+  p.log.success(`Unset ${keys.length} variable(s) in ${namespace}`)
+}
+
+/**
+ * A namespace is just a tag on its items, so removing one means deleting
+ * every variable it holds — gated behind a typed confirmation.
+ */
+async function handleRemoveNamespace(namespace: string): Promise<boolean> {
+  const vars = await getNamespaceVars(namespace)
+  if (vars.length === 0) {
+    p.log.warn(`${namespace} has no variables — nothing to remove.`)
+    return false
+  }
+
+  const proceed = await confirmOrSkip(
+    `Remove namespace ${namespace}? This deletes all ${vars.length} variable(s) from 1Password permanently.`,
+  )
+  if (!proceed) {
+    return false
+  }
+
+  const typed = expectValue<string>(
+    await p.text({
+      message: `Type "${namespace}" to confirm`,
+      placeholder: namespace,
+      validate(value) {
+        return value?.trim() === namespace ? undefined : `Type "${namespace}" to confirm`
+      },
+    }),
+  )
+  if (typed.trim() !== namespace) {
+    p.log.info('Skipped')
+    return false
+  }
+
+  const spin = p.spinner()
+  spin.start(`Removing ${namespace}`)
+  for (const [index, item] of vars.entries()) {
+    spin.message(`Deleting ${index + 1}/${vars.length}  ${item.key}`)
+    await removeVar(namespace, item.key)
+  }
+  spin.stop(`Removed ${namespace} (${vars.length} variable(s))`)
+  return true
 }
 
 async function handleDisable(namespace: string): Promise<void> {
@@ -163,7 +238,10 @@ async function handleEnable(namespace: string): Promise<void> {
 }
 
 async function executeAction(namespace: string, action: Action): Promise<string> {
-  const handlers: Record<Exclude<Action, 'switch' | 'exit'>, () => Promise<void>> = {
+  const handlers: Record<
+    Exclude<Action, 'switch' | 'exit' | 'remove-namespace'>,
+    () => Promise<void>
+  > = {
     set: async () => await handleSet(namespace),
     edit: async () => await handleEdit(namespace),
     unset: async () => await handleUnset(namespace),
@@ -174,6 +252,11 @@ async function executeAction(namespace: string, action: Action): Promise<string>
 
   if (action === 'switch') {
     return await chooseNamespace()
+  }
+
+  if (action === 'remove-namespace') {
+    const removed = await handleRemoveNamespace(namespace)
+    return removed ? await chooseNamespace() : namespace
   }
 
   if (action === 'exit') {
@@ -191,11 +274,18 @@ async function chooseAction(): Promise<Action> {
       options: [
         { label: 'Set variable', value: 'set' },
         { label: 'Edit variable', value: 'edit' },
-        { label: 'Unset variable', value: 'unset' },
-        { label: 'Disable variable', value: 'disable' },
+        {
+          label: 'Unset variables — permanently delete them from 1Password',
+          value: 'unset',
+        },
+        { label: 'Disable variable (keep it, stop exporting it)', value: 'disable' },
         { label: 'Enable variable', value: 'enable' },
         { label: 'Explode a 1Password item into this namespace', value: 'explode' },
         { label: 'Switch namespace', value: 'switch' },
+        {
+          label: 'Remove namespace — delete every variable in it',
+          value: 'remove-namespace',
+        },
         { label: 'Exit', value: 'exit' },
       ],
     }),
