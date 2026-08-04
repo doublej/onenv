@@ -4,6 +4,8 @@ import * as p from '@clack/prompts'
 import { Command } from 'commander'
 import { buildFile } from './commands/build-file.js'
 import { registerCheckCommand } from './commands/check.js'
+import { registerCompleteCommand } from './commands/complete.js'
+import { registerCompletionCommand } from './commands/completion.js'
 import { registerDoctorCommand } from './commands/doctor.js'
 import { registerEditCommand } from './commands/edit.js'
 import { registerExplodeCommand } from './commands/explode.js'
@@ -318,6 +320,8 @@ function collectOption(value: string, prev: string[]): string[] {
 }
 
 registerExportCommand(program)
+registerCompletionCommand(program)
+registerCompleteCommand(program)
 
 // Intent-first routing: bare argument → list namespace, no args → tui
 program

@@ -41,6 +41,7 @@ Commands:
   init                                           Set up .onenv.json for the current project
   run [options] [-- command...]                  Run project command with secrets injected from .onenv.json
   export [options] <namespaces> [-- command...]  Inject enabled variables into a command, or print them with --reveal (add --format shell to eval into your shell)
+  completion [shell]                             Print the shell completion script (zsh, bash, or fish)
 
 Examples:
   $ onenv

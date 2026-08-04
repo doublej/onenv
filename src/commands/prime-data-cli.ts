@@ -108,8 +108,14 @@ export function buildCommands(): CommandSpec[] {
     {
       name: 'tui',
       description:
-        'Open the interactive @clack-based terminal UI. Equivalent to running "onenv" with no args.',
+        'Open the interactive @clack-based terminal UI. Equivalent to running "onenv" with no args. Menu covers set/edit/unset (multi-select delete), disable/enable, explode, switch namespace, and remove namespace (deletes every variable in it, behind a typed confirmation).',
       output: 'Interactive only. Not for scripting.',
+    },
+    {
+      name: 'completion [zsh|bash|fish]',
+      description:
+        "Print the shell completion script for the given shell (default: detected from $SHELL). Generated from the live command table, so it covers every command and flag. Dynamic values come from the internal `onenv __complete <namespaces|keys|groups|items|vaults> [namespace]` command, which prints one candidate per line and stays silent on failure. Item titles (for explode) are read with the USER's op auth, cached for an hour by zsh, and matched anywhere in the title.",
+      output: "Shell script on stdout. Redirect it into the shell's completion directory.",
     },
     {
       name: 'prime [--json]',

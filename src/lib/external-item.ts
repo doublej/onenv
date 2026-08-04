@@ -69,6 +69,17 @@ export async function listExternalItems(vault?: string): Promise<ExternalItemSum
     .sort((a, b) => a.title.localeCompare(b.title))
 }
 
+/** Vault names the user's own op auth can see. */
+export async function listExternalVaults(): Promise<string[]> {
+  const raw = (await runOp(['vault', 'list', '--format', 'json'], undefined, userEnv())).trim()
+  if (!raw || raw === '[]') return []
+  const vaults = JSON.parse(raw) as { name?: string }[]
+  return vaults
+    .map((v) => v.name)
+    .filter((name): name is string => Boolean(name))
+    .sort()
+}
+
 /**
  * Fetch a regular (non-onenv) item by title or ID. Unlike every other read,
  * this is NOT scoped to ONENV_VAULT, and it runs op with the user's own auth

@@ -38,6 +38,18 @@ describe('listExternalItems', () => {
   })
 })
 
+describe('listExternalVaults', () => {
+  afterEach(() => {
+    runOp.mockReset()
+  })
+
+  it('returns sorted vault names', async () => {
+    runOp.mockResolvedValue(JSON.stringify([{ name: 'Work' }, { name: 'Personal' }, {}]))
+    const { listExternalVaults } = await import('./external-item.js')
+    expect(await listExternalVaults()).toEqual(['Personal', 'Work'])
+  })
+})
+
 describe('getExternalItem', () => {
   afterEach(() => {
     runOp.mockReset()

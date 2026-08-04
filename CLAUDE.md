@@ -49,7 +49,7 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 
 ### Source layout
 
-- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, doctor, disable, enable, import, explode, migrate, build-file, init, run, export.
+- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, doctor, disable, enable, import, explode, migrate, build-file, init, run, export, completion.
 - `src/commands/set.ts` / `edit.ts` / `unset.ts` / `get.ts` / `check.ts` — extracted single-key commands (each exports an action + `registerXCommand`)
 - `src/commands/_prompt.ts` — `assertValue`, `readValueFromPrompt`, `readValueFromStdin` shared by `set` and `edit`
 - `src/commands/tui.ts` — interactive @clack/prompts TUI loop
@@ -59,6 +59,8 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback and `--from-stdin`
 - `src/commands/explode.ts` — copy a regular 1Password item (e.g. a Login, read with the current op auth from any vault) into managed namespace keys; supports `--vault`, `--prefix`, `--dry-run`, atomic `--overwrite`
 - `src/commands/_snapshot.ts` — snapshot/rollback helpers shared by `import` and `explode`
+- `src/commands/explode-tui.ts` — guided explode flow (fuzzy item search, plan preview, key picking); `_prompts.ts` holds the shared namespace picker + fuzzy filter
+- `src/commands/completion.ts` — `onenv completion [zsh|bash|fish]`; scripts are generated from the live Commander program by `completion-data.ts` + `completion-zsh.ts` / `completion-shells.ts`, and `complete.ts` serves the hidden `__complete` candidate feed
 - `src/commands/build-file.ts` — reassemble a grouped JSON file from stored leaves
 - `src/commands/run-files.ts` — `--file group:VAR` materialization + child-process cleanup helpers
 - `src/lib/external-item.ts` — fetch a regular (non-onenv) 1Password item by title/ID, unscoped from `ONENV_VAULT`; consumed by `explode`
