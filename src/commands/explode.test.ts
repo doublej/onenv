@@ -167,6 +167,22 @@ describe('explodeItem', () => {
     await expect(explodeItem('github', 'GitHub', { dryRun: true })).rejects.toThrow(/collisions/)
   })
 
+  it('skips duplicate unnamed fields instead of colliding', async () => {
+    getExternalItem.mockResolvedValue(
+      loginItem({
+        primaryUrl: undefined,
+        fields: [
+          { id: 'f1', type: 'STRING', label: '', value: 'a' },
+          { id: 'f2', type: 'STRING', label: '', value: 'b' },
+          { id: 'f3', type: 'STRING', label: 'username', value: 'jj' },
+        ],
+      }),
+    )
+    const { explodeItem } = await import('./explode.js')
+    const result = await explodeItem('github', 'GitHub', { dryRun: true })
+    expect(result.rows).toEqual([{ key: 'GITHUB_USERNAME', field: 'username', type: 'STRING' }])
+  })
+
   it('errors when the item has no usable fields', async () => {
     getExternalItem.mockResolvedValue(
       loginItem({

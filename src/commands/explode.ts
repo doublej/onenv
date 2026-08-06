@@ -117,6 +117,7 @@ function planEntries(item: ExternalItem, prefix: string): PlanEntry[] {
     if (!field.value) continue
     if (field.purpose === 'NOTES') continue
     const label = field.label ?? field.id
+    if (!label.trim()) continue
     entries.push({
       key: validateKey(deriveKey(label, prefix)),
       field: label,
