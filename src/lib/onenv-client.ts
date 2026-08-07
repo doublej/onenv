@@ -41,7 +41,15 @@ async function spawnOp(
   env?: NodeJS.ProcessEnv,
 ): Promise<ExecResult> {
   return await new Promise<ExecResult>((resolve, reject) => {
-    const child = spawn('op', args, { stdio: ['pipe', 'pipe', 'pipe'], env: env ?? process.env })
+    // op only reads batch stdin ("item get -") from a real FIFO pipe — node's
+    // 'pipe' stdio is a socketpair on macOS and op ignores it. Route stdin
+    // through a shell pipe (a genuine FIFO), carrying the payload in an env var.
+    const child = stdin
+      ? spawn('sh', ['-c', 'printf %s "$ONENV_OP_STDIN" | op "$@"', 'sh', ...args], {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...(env ?? process.env), ONENV_OP_STDIN: stdin },
+        })
+      : spawn('op', args, { stdio: ['pipe', 'pipe', 'pipe'], env: env ?? process.env })
 
     let stdout = ''
     let stderr = ''
@@ -68,7 +76,7 @@ async function spawnOp(
       resolve({ code: code ?? 1, stdout, stderr })
     })
 
-    child.stdin.end(stdin ?? '')
+    if (child.stdin) child.stdin.end('')
   })
 }
 
@@ -337,6 +345,18 @@ function readMetaFromItem(item: OpItemDetail): { value: string } & ItemMeta {
 
 export type FullItem = { key: string; value: string } & ItemMeta
 
+/** Batch `op item get -` emits pretty-printed objects back-to-back, not an
+ * array. Each object's closing brace is at column 0 — split there. */
+function parseConcatenatedJson(raw: string): OpItemDetail[] {
+  const trimmed = raw.trim()
+  if (!trimmed) return []
+  if (trimmed.startsWith('[')) return JSON.parse(trimmed) as OpItemDetail[]
+  return trimmed
+    .split(/^\}/m)
+    .filter((part) => part.trim())
+    .map((part) => JSON.parse(`${part}}`) as OpItemDetail)
+}
+
 export async function fetchAllItems(namespace: string): Promise<FullItem[]> {
   const items = (await listItems(namespace)).filter(
     (it) => parseTitle(it.title)?.namespace === namespace,
@@ -348,8 +368,7 @@ export async function fetchAllItems(namespace: string): Promise<FullItem[]> {
   // documented by op. Output order is not guaranteed, so match by title.
   const stdin = JSON.stringify(items.map(({ id }) => ({ id })))
   const raw = await runOp(['item', 'get', '-', '--vault', ONENV_VAULT, '--format', 'json'], stdin)
-  const parsed = JSON.parse(raw) as OpItemDetail | OpItemDetail[]
-  const details = Array.isArray(parsed) ? parsed : [parsed]
+  const details = parseConcatenatedJson(raw)
 
   const out: FullItem[] = []
   for (const detail of details) {
