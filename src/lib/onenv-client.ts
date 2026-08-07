@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CliError, opError } from './errors.js'
+import { parseConcatenatedJson } from './op-batch-json.js'
 import { clearTokenCache } from './op-token.js'
 import type { JsonLeafType } from './types.js'
 
@@ -345,18 +346,6 @@ function readMetaFromItem(item: OpItemDetail): { value: string } & ItemMeta {
 
 export type FullItem = { key: string; value: string } & ItemMeta
 
-/** Batch `op item get -` emits pretty-printed objects back-to-back, not an
- * array. Each object's closing brace is at column 0 — split there. */
-function parseConcatenatedJson(raw: string): OpItemDetail[] {
-  const trimmed = raw.trim()
-  if (!trimmed) return []
-  if (trimmed.startsWith('[')) return JSON.parse(trimmed) as OpItemDetail[]
-  return trimmed
-    .split(/^\}/m)
-    .filter((part) => part.trim())
-    .map((part) => JSON.parse(`${part}}`) as OpItemDetail)
-}
-
 export async function fetchAllItems(namespace: string): Promise<FullItem[]> {
   const items = (await listItems(namespace)).filter(
     (it) => parseTitle(it.title)?.namespace === namespace,
@@ -368,7 +357,7 @@ export async function fetchAllItems(namespace: string): Promise<FullItem[]> {
   // documented by op. Output order is not guaranteed, so match by title.
   const stdin = JSON.stringify(items.map(({ id }) => ({ id })))
   const raw = await runOp(['item', 'get', '-', '--vault', ONENV_VAULT, '--format', 'json'], stdin)
-  const details = parseConcatenatedJson(raw)
+  const details = parseConcatenatedJson<OpItemDetail>(raw)
 
   const out: FullItem[] = []
   for (const detail of details) {

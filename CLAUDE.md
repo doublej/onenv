@@ -73,6 +73,7 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - `src/lib/output.ts` — JSON/text output formatting
 - `src/lib/ref-store.ts` — @-ref shorthand storage (positional: `@1`, `@2`, `@last`)
 - `src/lib/op-token.ts` — `op://` reference resolution + cache at `~/.config/onenv-manager/op-token`
+- `src/lib/op-batch-json.ts` — parses op's concatenated pretty-printed JSON from batch `item get -` reads; consumed by `fetchAllItems`
 - `src/lib/validation.ts` — namespace + key regex/length validation
 - `src/lib/version.ts` — resolves the CLI version: `process.env.ONENV_VERSION` (baked into compiled binaries via `--env`) else reads `package.json` at runtime
 - `src/lib/types.ts` — shared `NamespaceVar` (with optional `fingerprint`), `StateFile`, and `JsonLeafType` types
