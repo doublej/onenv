@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.10.2 — 2026-08-07
+
+### Fixed
+
+- route op batch stdin through a real FIFO pipe, parse concatenated JSON output (03f5f2c)
+- **explode**: skip unnamed fields to avoid key collisions (09ab2f8)
+
+### Changed
+
+- extract op batch JSON parsing to clear the loc-check cap (4fc3f27)
+
+### Chore
+
+- bump to 0.10.1 (cce1dad)
+
+### Tests
+
+- cover the batch FIFO stdin path and concatenated JSON parsing (e144884)
+
 ## v0.10.0 — 2026-08-04
 
 ### Added
