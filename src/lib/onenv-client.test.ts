@@ -108,6 +108,35 @@ describe('onenv-client', () => {
     expect(await listValues('missing')).toEqual({})
   })
 
+  it('fetchAllItems batches via a real shell pipe and parses concatenated JSON', async () => {
+    const items = sampleItems.filter((i) => i.tags.includes('onenv:aws'))
+    const details = items.map((it) => ({
+      title: it.title,
+      fields: [{ id: 'credential', type: 'CONCEALED', value: `val_${it.id}` }],
+    }))
+    const concatenated = details.map((d) => JSON.stringify(d, null, 2)).join('\n')
+
+    vi.mocked(cp.spawn)
+      .mockImplementationOnce((() => fakeChild(JSON.stringify(items))) as never)
+      .mockImplementationOnce(((
+        cmd: string,
+        args: readonly string[],
+        opts: { env?: Record<string, string> },
+      ) => {
+        // op only reads batch stdin from a real FIFO — this must go through
+        // a shell pipe (`sh -c '... | op ...'`), never a direct `op` spawn.
+        expect(cmd).toBe('sh')
+        expect(args[2]).toBe('sh')
+        expect(opts.env?.ONENV_OP_STDIN).toBe(JSON.stringify(items.map(({ id }) => ({ id }))))
+        return fakeChild(concatenated) as never
+      }) as never)
+
+    const { fetchAllItems } = await import('./onenv-client.js')
+    const result = await fetchAllItems('aws')
+    expect(result.map((r) => r.key).sort()).toEqual(['AWS_KEY', 'AWS_SECRET'])
+    expect(result.find((r) => r.key === 'AWS_KEY')?.value).toBe('val_a1')
+  })
+
   it('setValue creates a new item using a template file', async () => {
     let createArgs: readonly string[] = []
     let createTemplate: string | null = null
