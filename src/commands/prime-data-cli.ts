@@ -69,7 +69,8 @@ export function buildCommands(): CommandSpec[] {
       name: 'run [--file <[ns/]group:VAR>...] [--file-rw <[ns/]group:VAR>...] -- <cmd...>',
       description:
         'Read .onenv.json, fetch enabled secrets across all configured namespaces, exec <cmd> with secrets injected as env vars. Inherits stdio. Namespaces listed in .onenv.json "fileOnlyNamespaces" are SKIPPED by flat injection (and exempt from the cross-namespace collision check) but stay resolvable via --file — use this for per-account OAuth namespaces whose keys would otherwise collide. --file (repeatable) materializes the JSON for a group into a 0600 tempfile under XDG_RUNTIME_DIR (fallback: os tmpdir), exposes its absolute path as the named env var, and removes the tempfile on child exit / SIGINT / SIGTERM. Spec accepts bare `group:VAR` (resolves uniquely across project namespaces) or explicit `namespace/group:VAR` (required when the same group name lives in multiple namespaces, e.g. per-account OAuth tokens). --file-rw behaves identically but also sha256-hashes the materialized file before exec and re-imports it into the same namespace+group on clean child close if the hash changed; writeback is skipped on signal exit, on read failure, or if the hash matches.',
-      output: 'Mirrors the child exit code. No onenv output written.',
+      output:
+        'Mirrors the child exit code. No onenv output written. Child env carries ONENV_ACTIVE=<ns1,ns2,...> (the flat-injected namespaces) as a primed-environment marker.',
     },
     {
       name: 'import <ns> [file] -g, --group <name> [--overwrite] [--from-stdin] [--keys upper-snake|leaf] [--prefix <s>] [--dry-run]',
@@ -103,7 +104,14 @@ export function buildCommands(): CommandSpec[] {
       name: 'export <ns[,ns2,...]> -- <cmd...>',
       description:
         'Exec <cmd> with the secrets injected into its environment instead of printing — no --reveal needed since nothing is written to stdout. Same cross-namespace collision check applies.',
-      output: 'Mirrors the child exit code. No onenv output written.',
+      output:
+        'Mirrors the child exit code. No onenv output written. Child env carries ONENV_ACTIVE=<ns1,ns2,...> as a primed-environment marker.',
+    },
+    {
+      name: 'shell [ns[,ns2,...]]',
+      description:
+        'Start a subshell ($SHELL, fallback /bin/sh) with secrets injected for the WHOLE session — no per-command onenv prefix needed inside it. Without namespaces, reads .onenv.json like `run` (fileOnlyNamespaces skipped). Sets ONENV_ACTIVE=<ns1,ns2,...> in the subshell; refuses to nest (VALIDATION error if ONENV_ACTIVE is already set). Interactive by nature — agents should prefer `run`/`export -- <cmd>` per command, or check ONENV_ACTIVE to see if a human already started one.',
+      output: 'Mirrors the subshell exit code. No onenv output written.',
     },
     {
       name: 'tui',

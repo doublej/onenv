@@ -42,6 +42,9 @@ export interface DetectedSection {
   env_files: { relative: string; key_count: number; tracked: boolean }[]
   onenv_json: 'present' | 'absent' | 'invalid'
   namespaces_referenced: string[]
+  // Value of ONENV_ACTIVE in the environment prime ran in — the marker set by
+  // run/shell/export injection. null → this environment is not primed.
+  onenv_active: string | null
   next_action: string
   caveat: string
 }
@@ -70,6 +73,7 @@ export interface RefsSection {
 
 export interface WorkflowSection {
   project_setup: string[]
+  session: string[]
   ad_hoc: string[]
 }
 
@@ -152,6 +156,12 @@ export function buildPrimer(version: string, learnings: Learning[] = []): Primer
         'onenv set NAMESPACE KEY    # interactive value prompt, stores in 1Password',
         'cd PROJECT && onenv init   # pick namespaces, writes .onenv.json',
         'onenv run -- CMD           # fetch project secrets, inject as env, exec CMD',
+      ],
+      session: [
+        'onenv shell [ns1,ns2]         # subshell with secrets loaded for the whole session (defaults to .onenv.json)',
+        'onenv export ns1,ns2 -- $SHELL   # same, explicit namespaces',
+        'eval "$(onenv export ns1,ns2 --reveal --format shell)"   # load into the CURRENT shell',
+        'Injected environments carry ONENV_ACTIVE=<ns1,ns2,...> — check it to know you are primed before prefixing commands with onenv.',
       ],
       ad_hoc: [
         'onenv export ns1,ns2 -- CMD   # one-shot inject, exec',

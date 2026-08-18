@@ -44,6 +44,7 @@ function renderDetected(d: DetectedSection): string {
     `project: ${d.project_marker.kind} (${d.project_marker.file})`,
     `framework: ${d.framework.kind}${d.framework.public_prefix ? ` (public prefix: ${d.framework.public_prefix})` : ''}`,
     `.onenv.json: ${d.onenv_json}${d.namespaces_referenced.length ? ` (namespaces: ${d.namespaces_referenced.join(', ')})` : ''}`,
+    `ONENV_ACTIVE: ${d.onenv_active ?? 'not set (environment not primed)'}`,
   ]
   if (d.env_files.length > 0) {
     lines.push('env files:')
@@ -138,7 +139,7 @@ function groupCommands(commands: CommandSpec[]): { label: string; entries: Comma
 }
 
 const CORE_PREFIXES = ['set ', 'edit ', 'get ', 'unset ', 'list', 'disable ', 'enable ', 'init']
-const RUN_PREFIXES = ['run ', 'export ']
+const RUN_PREFIXES = ['run ', 'export ', 'shell ']
 const FILE_PREFIXES = ['import ', 'build-file ']
 const DIAGNOSTICS_PREFIXES = ['check', 'doctor', 'prime']
 const LEARNINGS_PREFIXES = ['learn ', 'vote ', 'learnings ']
@@ -154,8 +155,9 @@ function formatCommand(c: CommandSpec): string {
 
 function renderWorkflow(w: WorkflowSection): string {
   const project = w.project_setup.map((s, i) => `${i + 1}. ${s}`).join('\n')
+  const session = w.session.map((s) => `- ${s}`).join('\n')
   const adhoc = w.ad_hoc.map((s) => `- ${s}`).join('\n')
-  return ['PROJECT SETUP:', project, '', 'AD-HOC:', adhoc].join('\n')
+  return ['PROJECT SETUP:', project, '', 'SESSION:', session, '', 'AD-HOC:', adhoc].join('\n')
 }
 
 function renderErrors(errors: ErrorsSection): string {

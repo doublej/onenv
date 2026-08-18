@@ -73,6 +73,66 @@ describe('buildDetectedSection', () => {
   })
 })
 
+describe('priming awareness (ONENV_ACTIVE)', () => {
+  function project(namespaces: unknown = ['stripe', 'aws'], extra: object = {}): string {
+    const dir = fixture()
+    writeFileSync(join(dir, 'package.json'), '{}')
+    writeFileSync(join(dir, '.onenv.json'), JSON.stringify({ namespaces, ...extra }))
+    return dir
+  }
+
+  it('reports NOT primed with run/shell instructions when the marker is absent', async () => {
+    const result = await buildDetectedSection(project(), {})
+    expect(result?.onenv_active).toBeNull()
+    expect(result?.next_action).toMatch(/NOT primed/)
+    expect(result?.next_action).toMatch(/onenv run -- <cmd>/)
+    expect(result?.next_action).toMatch(/onenv shell/)
+  })
+
+  it('reports already primed when the marker covers every namespace', async () => {
+    const env = { ONENV_ACTIVE: 'stripe,aws' }
+    const result = await buildDetectedSection(project(), env)
+    expect(result?.onenv_active).toBe('stripe,aws')
+    expect(result?.next_action).toMatch(/already primed/)
+    expect(result?.next_action).toMatch(/no onenv prefix needed/i)
+  })
+
+  it('reports partial priming and names the missing namespaces', async () => {
+    const result = await buildDetectedSection(project(), { ONENV_ACTIVE: 'stripe' })
+    expect(result?.next_action).toMatch(/PARTIALLY primed/)
+    expect(result?.next_action).toMatch(/missing namespaces: aws/)
+  })
+
+  it('ignores fileOnlyNamespaces when judging priming', async () => {
+    const dir = project(['stripe', 'oauth'], { fileOnlyNamespaces: ['oauth'] })
+    const result = await buildDetectedSection(dir, { ONENV_ACTIVE: 'stripe' })
+    expect(result?.next_action).toMatch(/already primed/)
+  })
+})
+
+describe('rendering priming awareness', () => {
+  it('XML detected block carries the ONENV_ACTIVE line and workflow has SESSION', async () => {
+    const data = buildPrimer('test')
+    const dir = fixture()
+    writeFileSync(join(dir, 'package.json'), '{}')
+    data.detected = await buildDetectedSection(dir, {})
+    const xml = renderXml(data)
+    expect(xml).toMatch(/ONENV_ACTIVE: not set \(environment not primed\)/)
+    expect(xml).toMatch(/SESSION:/)
+    expect(xml).toMatch(/onenv shell/)
+  })
+
+  it('Markdown detected block carries the ONENV_ACTIVE line and workflow has Session', async () => {
+    const data = buildPrimer('test')
+    const dir = fixture()
+    writeFileSync(join(dir, 'package.json'), '{}')
+    data.detected = await buildDetectedSection(dir, { ONENV_ACTIVE: 'aws' })
+    const md = renderMarkdown(data)
+    expect(md).toMatch(/`ONENV_ACTIVE`: `aws`/)
+    expect(md).toMatch(/^### Session$/m)
+  })
+})
+
 describe('rendering detected block', () => {
   it('XML includes <detected> tag only when present', async () => {
     const data = buildPrimer('test')
