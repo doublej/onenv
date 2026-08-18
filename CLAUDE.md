@@ -49,8 +49,9 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 
 ### Source layout
 
-- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, doctor, disable, enable, import, explode, migrate, build-file, init, run, export, completion.
+- `src/cli.ts` — Commander-based CLI entry point; each command is extracted into `src/commands/<name>.ts` and wired via a `registerXCommand(program)` function. Commands wired: prime, tui, list, get, set, edit, unset, check, doctor, disable, enable, import, explode, migrate, build-file, init, run, shell, export, completion.
 - `src/commands/set.ts` / `edit.ts` / `unset.ts` / `get.ts` / `check.ts` — extracted single-key commands (each exports an action + `registerXCommand`)
+- `src/commands/shell.ts` — `onenv shell [namespaces]`: subshell with secrets injected for the whole session; refuses to nest. All injected environments (`run`, `shell`, `export -- cmd`, shell-format eval) carry the `ONENV_ACTIVE=<ns1,ns2,...>` marker built by `src/lib/shell-export.ts` `injectedEnv`; `prime` reads it to report priming state
 - `src/commands/_prompt.ts` — `assertValue`, `readValueFromPrompt`, `readValueFromStdin` shared by `set` and `edit`
 - `src/commands/tui.ts` — interactive @clack/prompts TUI loop
 - `src/commands/prime.ts` — agent primer dispatcher (XML on TTY, Markdown when piped, JSON with `--json`)

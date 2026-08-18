@@ -24,7 +24,8 @@ onenv keeps the `KEY=value` ergonomics — your app code does not change. But
 the values live in 1Password:
 
 - **Nothing on disk.** `onenv run` injects secrets into a child process's env
-  and they vanish when it exits.
+  and they vanish when it exits. Need a whole session? `onenv shell` opens a
+  subshell with everything loaded, marked with `ONENV_ACTIVE`.
 - **Real auth.** Touch ID for you, a scoped service account for CI.
 - **Audited.** 1Password tracks every read. Rotate by overwriting the item; no
   redeploy, no edits to a `.env` file on your colleague's laptop.
@@ -189,6 +190,7 @@ onenv enable  <ns> <KEY>                  # restore
 onenv init                                # write .onenv.json for the current project
 onenv check                               # diff process.env against the vault (no values printed)
 onenv run    -- <cmd>                     # run cmd with project secrets injected
+onenv shell  [ns[,ns2]]                   # subshell with secrets loaded for the whole session
 onenv export <ns[,ns2]> -- <cmd>          # run cmd with the listed namespaces injected
 onenv export <ns[,ns2]> --reveal          # print enabled values as JSON (explicit opt-in)
 eval "$(onenv export <ns> --reveal --format shell)"  # load a namespace into your shell
@@ -201,6 +203,11 @@ onenv build-file <ns> --group <name>      # reassemble the JSON from stored leav
 onenv prime                               # full agent primer (XML / Markdown / JSON)
 onenv tui                                 # interactive TUI
 ```
+
+Every injected environment (`run`, `shell`, `export -- <cmd>`, the shell-format
+eval) carries `ONENV_ACTIVE=<ns1,ns2,...>` — tools and agents check it to know
+secrets are already loaded. `onenv prime` reads it and says whether the current
+environment is primed. `onenv shell` refuses to nest.
 
 `@1`, `@2`, `@last` work anywhere a namespace is expected — they index into
 the most recent list you saw.
