@@ -19,6 +19,7 @@ import { printPrime } from './commands/prime.js'
 import { LOGO } from './commands/prime-logo.js'
 import { bindChildCleanup, prepareFileInjections } from './commands/run-files.js'
 import { registerSetCommand } from './commands/set.js'
+import { registerShellCommand } from './commands/shell.js'
 import { runTui } from './commands/tui.js'
 import { registerUnsetCommand } from './commands/unset.js'
 import {
@@ -39,6 +40,7 @@ import { handleError, output, setJsonMode, success } from './lib/output.js'
 import { shouldUseJsonOutput } from './lib/output-mode.js'
 import { readProjectConfig, writeProjectConfig } from './lib/project-config.js'
 import { resolveRef, storeRefs } from './lib/ref-store.js'
+import { injectedEnv } from './lib/shell-export.js'
 import type { NamespaceVar } from './lib/types.js'
 import { validateKey, validateNamespace } from './lib/validation.js'
 import { getPackageVersion } from './lib/version.js'
@@ -299,7 +301,7 @@ program
     )
     const child = spawn(cmd[0], cmd.slice(1), {
       stdio: 'inherit',
-      env: { ...process.env, ...values, ...fileEnv },
+      env: { ...injectedEnv(values, flatNamespaces), ...fileEnv },
     })
     bindChildCleanup(child, injections)
   })
@@ -312,7 +314,10 @@ Examples:
   $ onenv run --file gcp-sa:GOOGLE_APPLICATION_CREDENTIALS -- python upload.py
       Materialize a grouped JSON to a tempfile and expose its path
   $ onenv run --file-rw oauth/client_secret:GOOGLE_CREDS -- python refresh.py
-      Same as --file, but write the tempfile back to onenv on clean exit`,
+      Same as --file, but write the tempfile back to onenv on clean exit
+
+The child env carries ONENV_ACTIVE=<ns1,ns2,...> so tools (and \`onenv prime\`)
+can tell the environment is primed. For a whole primed session, see \`onenv shell\`.`,
   )
 
 function collectOption(value: string, prev: string[]): string[] {
@@ -320,6 +325,7 @@ function collectOption(value: string, prev: string[]): string[] {
 }
 
 registerExportCommand(program)
+registerShellCommand(program)
 registerCompletionCommand(program)
 registerCompleteCommand(program)
 

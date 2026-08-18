@@ -44,8 +44,17 @@ describe('export', () => {
     const r = runCli(['export', 'aws', '--reveal', '--format', 'shell'], ws)
     expect(r.code).toBe(0)
     expect(r.stdout).toBe(
-      "export AWS_ACCESS_KEY_ID='AKIA_EXAMPLE'\nexport AWS_SECRET_ACCESS_KEY='s3cr3t/value'\n",
+      "export AWS_ACCESS_KEY_ID='AKIA_EXAMPLE'\nexport AWS_SECRET_ACCESS_KEY='s3cr3t/value'\nexport ONENV_ACTIVE='aws'\n",
     )
+  })
+
+  it('inject mode marks the child env with ONENV_ACTIVE', () => {
+    const r = runCli(
+      ['export', 'aws', '--', 'node', '-e', 'process.stdout.write(process.env.ONENV_ACTIVE||"")'],
+      ws,
+    )
+    expect(r.code).toBe(0)
+    expect(r.stdout).toBe('aws')
   })
 
   it('inject mode (-- cmd) needs no --reveal and never prints the secret', () => {

@@ -41,6 +41,7 @@ Commands:
   init                                           Set up .onenv.json for the current project
   run [options] [-- command...]                  Run project command with secrets injected from .onenv.json
   export [options] <namespaces> [-- command...]  Inject enabled variables into a command, or print them with --reveal (add --format shell to eval into your shell)
+  shell [namespaces]                             Start a subshell with secrets injected for the whole session (marked with ONENV_ACTIVE)
   completion [shell]                             Print the shell completion script (zsh, bash, or fish)
 
 Examples:
@@ -129,6 +130,8 @@ Options:
 Examples:
   $ onenv export aws -- terraform apply
       Inject aws vars into a command (never printed; no --reveal needed)
+  $ onenv export aws -- $SHELL
+      Start a subshell with aws vars loaded (see also: onenv shell)
   $ onenv export aws --reveal
       Print enabled vars as JSON — refuses without --reveal
   $ eval "$(onenv export aws --reveal --format shell)"

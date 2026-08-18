@@ -5,7 +5,7 @@ import { argsAfterDoubleDash } from '../lib/argv.js'
 import { validationError } from '../lib/errors.js'
 import { output } from '../lib/output.js'
 import { resolveRef, storeRefs } from '../lib/ref-store.js'
-import { renderShellExports } from '../lib/shell-export.js'
+import { injectedEnv, renderShellExports } from '../lib/shell-export.js'
 import { validateNamespace } from '../lib/validation.js'
 
 export interface ExportOptions {
@@ -13,7 +13,7 @@ export interface ExportOptions {
   format?: string
 }
 
-async function resolveNamespaceList(raw: string): Promise<string[]> {
+export async function resolveNamespaceList(raw: string): Promise<string[]> {
   const parts = raw
     .split(',')
     .map((s) => s.trim())
@@ -24,13 +24,13 @@ async function resolveNamespaceList(raw: string): Promise<string[]> {
   return (await Promise.all(parts.map(resolveRef))).map(validateNamespace)
 }
 
-function runWithValues(cmd: string[], values: Record<string, string>): void {
+function runWithValues(cmd: string[], values: Record<string, string>, namespaces: string[]): void {
   if (cmd.length === 0) {
     throw validationError('No command provided after --', 'onenv export porkbun -- python demo.py')
   }
   const child = spawn(cmd[0], cmd.slice(1), {
     stdio: 'inherit',
-    env: { ...process.env, ...values },
+    env: injectedEnv(values, namespaces),
   })
   child.on('close', (code) => process.exit(code ?? 1))
 }
@@ -52,9 +52,13 @@ export function assertRevealAllowed(options: ExportOptions): void {
   }
 }
 
-function printValues(values: Record<string, string>, format: string | undefined): void {
+function printValues(
+  values: Record<string, string>,
+  format: string | undefined,
+  namespaces: string[],
+): void {
   if (format === 'shell') {
-    process.stdout.write(renderShellExports(values))
+    process.stdout.write(renderShellExports(values, namespaces))
     return
   }
   output(values)
@@ -82,10 +86,10 @@ export function registerExportCommand(program: Command): void {
       await storeRefs(namespaces)
       const values = await exportEnabledValuesStrict(namespaces)
       if (cmd) {
-        runWithValues(cmd, values)
+        runWithValues(cmd, values, namespaces)
         return
       }
-      printValues(values, options.format)
+      printValues(values, options.format, namespaces)
     })
   command.addHelpText(
     'after',
@@ -93,6 +97,8 @@ export function registerExportCommand(program: Command): void {
 Examples:
   $ onenv export aws -- terraform apply
       Inject aws vars into a command (never printed; no --reveal needed)
+  $ onenv export aws -- $SHELL
+      Start a subshell with aws vars loaded (see also: onenv shell)
   $ onenv export aws --reveal
       Print enabled vars as JSON — refuses without --reveal
   $ eval "$(onenv export aws --reveal --format shell)"
