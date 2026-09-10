@@ -22,6 +22,7 @@ export interface ImportOptions {
   overwrite?: boolean
   fromStdin?: boolean
   raw?: boolean
+  key?: string
 }
 
 export interface ImportPlanRow {
@@ -121,7 +122,7 @@ async function planRawRow(
   if (value.length === 0)
     throw validationError('Raw input is empty', 'Refusing to store an empty file')
   const name = filePath ? basename(filePath) : opts.group
-  const key = validateKey(deriveRawKey(name, opts.prefix ?? ''))
+  const key = opts.key ? validateKey(opts.key) : validateKey(deriveRawKey(name, opts.prefix ?? ''))
   return { entries: [{ path: name, type: 'raw', value }], rows: [{ key, path: name, type: 'raw' }] }
 }
 
@@ -215,6 +216,7 @@ interface ImportCliOptions {
   overwrite?: boolean
   fromStdin?: boolean
   raw?: boolean
+  key?: string
 }
 
 async function importAction(
@@ -231,6 +233,12 @@ async function importAction(
   if (!options.fromStdin && !file) {
     throw validationError('No input provided', 'Pass a file path or use --from-stdin')
   }
+  if (options.key && !options.raw) {
+    throw validationError(
+      '--key requires --raw',
+      'Use --key only with --raw; JSON imports derive keys from paths (see --keys/--prefix)',
+    )
+  }
   const namespace = validateNamespace(await resolveRef(rawNamespace))
   const strategy: KeyStrategy = options.keys === 'leaf' ? 'leaf' : 'upper-snake'
   const result = await importJsonFile(namespace, file, {
@@ -241,6 +249,7 @@ async function importAction(
     overwrite: options.overwrite,
     fromStdin: options.fromStdin,
     raw: options.raw,
+    key: options.key,
   })
   await storeRefs([namespace])
   if (options.dryRun) {
@@ -269,6 +278,7 @@ export function registerImportCommand(program: Command): void {
     .option('--overwrite', 'Overwrite existing keys regardless of group; atomic on failure')
     .option('--from-stdin', 'Read JSON (or raw content) from stdin instead of a file')
     .option('--raw', 'Store the file verbatim as ONE key (PEM, .p8, kubeconfig); no JSON parsing')
+    .option('--key <name>', 'Key name for the --raw entry (default: derived from the filename)')
     .action(importAction)
     .addHelpText(
       'after',
@@ -283,6 +293,8 @@ Examples:
   $ onenv import oauth ./client_secret.json --group oauth --dry-run
       Preview the import plan without writing
   $ onenv import apple ./AuthKey_ABC123.p8 --group authkey --raw
-      Store a non-JSON file verbatim; run --file authkey:VAR rebuilds it as AuthKey_ABC123.p8`,
+      Store a non-JSON file verbatim; run --file authkey:VAR rebuilds it as AuthKey_ABC123.p8
+  $ onenv import deckhand ./AuthKey_U76TN79743.p8 --group apns --raw --key APNS_KEY
+      Store a .p8 under an explicit key name (what your Justfile/tooling expects)`,
     )
 }

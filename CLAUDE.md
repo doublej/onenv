@@ -57,7 +57,7 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - `src/commands/prime.ts` — agent primer dispatcher (XML on TTY, Markdown when piped, JSON with `--json`)
 - `src/commands/prime-data.ts` + `prime-data-cli.ts` — primer data shape; `prime-detect.ts` builds the gated cwd snapshot
 - `src/commands/prime-xml.ts` / `prime-md.ts` — XML and Markdown renderers; `prime-logo.ts` holds the ASCII key banner
-- `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback, `--from-stdin`, and `--raw` (whole file as one key)
+- `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback, `--from-stdin`, and `--raw` (whole file as one key, `--key` overrides the derived name)
 - `src/commands/explode.ts` — copy a regular 1Password item (e.g. a Login, read with the current op auth from any vault) into managed namespace keys; supports `--vault`, `--prefix`, `--dry-run`, atomic `--overwrite`
 - `src/commands/_snapshot.ts` — snapshot/rollback helpers shared by `import` and `explode`
 - `src/commands/explode-tui.ts` — guided explode flow (fuzzy item search, plan preview, key picking); `_prompts.ts` holds the shared namespace picker + fuzzy filter

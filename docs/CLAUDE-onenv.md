@@ -20,7 +20,7 @@ Cross-namespace key collisions in `export` / `run` are a hard error — resolve 
 </data_model>
 
 <commands>
-prime · list [--groups] [--meta] · get [--fingerprint] [--meta] · set [--value-stdin] · edit [--value-stdin] · unset [--yes] · check · disable · enable · run [--file group:VAR] [--file-rw group:VAR] -- · export · init · import [--raw] [--overwrite] [--from-stdin] --group · build-file · tui
+prime · list [--groups] [--meta] · get [--fingerprint] [--meta] · set [--value-stdin] · edit [--value-stdin] · unset [--yes] · check · disable · enable · run [--file group:VAR] [--file-rw group:VAR] -- · export · init · import [--raw [--key NAME]] [--overwrite] [--from-stdin] --group · build-file · tui
 Single-ns fetch: `onenv list <ns>`. All ns: `onenv list`. Group view: `onenv list <ns> --groups`. Drift check: `onenv check`.
 </commands>
 

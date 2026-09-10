@@ -152,6 +152,14 @@ onenv run --file authkey:APP_STORE_CONNECT_API_KEY_PATH -- fastlane pilot upload
 # tempfile is .../onenv-XXXX/AuthKey_U76TN79743.p8, mode 0600
 ```
 
+Add `--key NAME` to name the stored key explicitly instead of deriving it from
+the filename (useful when a Justfile or other tooling expects a specific env
+var name):
+
+```bash
+onenv import deckhand ./AuthKey_U76TN79743.p8 --group apns --raw --key APNS_KEY
+```
+
 ### Per-account OAuth (one `token` group per account)
 
 When several namespaces hold the *same* leaf keys — e.g. one `token` group per
@@ -210,7 +218,7 @@ eval "$(onenv export <ns> --reveal --format shell)"  # load a namespace into you
 onenv import <ns> <file.json> --group <name>  # flatten a JSON file into onenv keys
 onenv import <ns> --group <name> --from-stdin # same, but read JSON from stdin
 onenv import <ns> <file.json> --group <name> --overwrite  # atomic replace (snapshot + rollback)
-onenv import <ns> <file.p8> --group <name> --raw   # store any file verbatim as one key
+onenv import <ns> <file.p8> --group <name> --raw   # store any file verbatim as one key [--key NAME]
 onenv build-file <ns> --group <name>      # reassemble the JSON (or raw file) from stored leaves
 
 onenv prime                               # full agent primer (XML / Markdown / JSON)
