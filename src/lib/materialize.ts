@@ -1,12 +1,13 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { validationError } from './errors.js'
-import { unflatten } from './json-flatten.js'
+import { findRawEntry, unflatten } from './json-flatten.js'
 import { listGroupEntries } from './onenv-client.js'
 
 export interface Materialized {
   path: string
+  raw: boolean
   cleanup: () => void
 }
 
@@ -18,12 +19,14 @@ export async function materializeFile(namespace: string, group: string): Promise
       `Run "onenv import ${namespace} <file> --group ${group}" first`,
     )
   }
-  const json = unflatten(entries)
+  const raw = findRawEntry(entries)
   const root = process.env.XDG_RUNTIME_DIR ?? tmpdir()
   const dir = mkdtempSync(join(root, 'onenv-'))
-  const file = join(dir, `${group}.json`)
-  writeFileSync(file, JSON.stringify(json), { mode: 0o600 })
-  return { path: file, cleanup: () => safeRm(dir) }
+  // raw groups keep their original filename (tools like Apple's check the pattern)
+  const file = join(dir, raw ? basename(raw.path) || group : `${group}.json`)
+  const body = raw ? raw.value : JSON.stringify(unflatten(entries))
+  writeFileSync(file, body, { mode: 0o600 })
+  return { path: file, raw: raw !== undefined, cleanup: () => safeRm(dir) }
 }
 
 function safeRm(dir: string): void {

@@ -31,7 +31,7 @@ Commands:
   doctor                                         Run health checks on the onenv environment and current project
   disable <namespace> <keys...>                  Disable one or more variables without deleting
   enable <namespace> <keys...>                   Re-enable one or more previously disabled variables
-  import [options] <namespace> [file]            Flatten a JSON file (or stdin) into onenv keys with reassembly metadata
+  import [options] <namespace> [file]            Flatten a JSON file (or stdin) into onenv keys, or store any file verbatim with --raw
   explode [options] [namespace] [item]           Explode a regular 1Password item (e.g. a Login) into namespace keys
   migrate                                        Migrate an existing codebase to onenv
   learn [text...]                                Record a reusable onenv learning for future agents (shared memory)

@@ -52,6 +52,14 @@ describe('buildFile', () => {
     expect(text).toBe(`${JSON.stringify({ a: 'x' }, null, 4)}\n`)
   })
 
+  it('prints a raw entry verbatim', async () => {
+    const pem = '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n'
+    listGroupEntries.mockResolvedValue([{ key: 'K', value: pem, path: 'AuthKey.p8', type: 'raw' }])
+    const { buildFile } = await import('./build-file.js')
+    await buildFile('apple', 'authkey')
+    expect(captured.join('')).toBe(pem)
+  })
+
   it('errors when the group is empty', async () => {
     listGroupEntries.mockResolvedValue([])
     const { buildFile } = await import('./build-file.js')

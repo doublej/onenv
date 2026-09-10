@@ -45,7 +45,7 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - Item title: `namespace/KEY` (e.g. `aws/AWS_SECRET_KEY`)
 - Item tag: `onenv:<namespace>` (the `onenv:` prefix marks the item as managed and is what the CLI filters on)
 - Secret stored in the `credential` field
-- Imported JSON files (via `onenv import`) carry extra STRING fields `group`, `path`, `type` per leaf for round-trip via `onenv build-file`
+- Imported JSON files (via `onenv import`) carry extra STRING fields `group`, `path`, `type` per leaf for round-trip via `onenv build-file`. `onenv import --raw` stores a non-JSON file as ONE key with `type=raw` and `path=<original basename>`; `build-file` and `run --file` reproduce it verbatim under that filename
 
 ### Source layout
 

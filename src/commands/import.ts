@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { basename } from 'node:path'
 import { text } from 'node:stream/consumers'
 import type { Command } from 'commander'
 import { validationError } from '../lib/errors.js'
@@ -20,6 +21,7 @@ export interface ImportOptions {
   dryRun?: boolean
   overwrite?: boolean
   fromStdin?: boolean
+  raw?: boolean
 }
 
 export interface ImportPlanRow {
@@ -47,8 +49,9 @@ export async function importJsonFile(
       'Pass --group <name> (or set opts.group when calling programmatically)',
     )
   }
-  const parsed = await readJsonInput(filePath, opts)
-  const { entries, rows } = planRows(parsed, opts)
+  const { entries, rows } = opts.raw
+    ? await planRawRow(filePath, opts)
+    : planRows(await readJsonInput(filePath, opts), opts)
 
   if (opts.dryRun) return { group: opts.group, rows }
 
@@ -104,6 +107,36 @@ function parseJson(raw: string, hint: string): unknown {
     const msg = err instanceof Error ? err.message : String(err)
     throw validationError(`Failed to parse JSON: ${msg}`, hint)
   }
+}
+
+/**
+ * `--raw`: the whole file becomes one key. The original filename is stored as
+ * the path so build-file / run --file can reproduce it byte-for-byte.
+ */
+async function planRawRow(
+  filePath: string | undefined,
+  opts: ImportOptions,
+): Promise<{ entries: FlatEntry[]; rows: ImportPlanRow[] }> {
+  const value = opts.fromStdin ? await text(process.stdin) : readRawFile(filePath)
+  if (value.length === 0)
+    throw validationError('Raw input is empty', 'Refusing to store an empty file')
+  const name = filePath ? basename(filePath) : opts.group
+  const key = validateKey(deriveRawKey(name, opts.prefix ?? ''))
+  return { entries: [{ path: name, type: 'raw', value }], rows: [{ key, path: name, type: 'raw' }] }
+}
+
+function readRawFile(filePath: string | undefined): string {
+  if (!filePath) throw validationError('No file provided', 'Pass a file path or use --from-stdin')
+  return readFileSync(filePath, 'utf-8')
+}
+
+function deriveRawKey(name: string, prefix: string): string {
+  const key = name
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/^(\d)/, '_$1')
+    .toUpperCase()
+  return prefix ? `${prefix}_${key}` : key
 }
 
 function planRows(
@@ -181,6 +214,7 @@ interface ImportCliOptions {
   dryRun?: boolean
   overwrite?: boolean
   fromStdin?: boolean
+  raw?: boolean
 }
 
 async function importAction(
@@ -195,7 +229,7 @@ async function importAction(
     )
   }
   if (!options.fromStdin && !file) {
-    throw validationError('No JSON source provided', 'Pass a file path or use --from-stdin')
+    throw validationError('No input provided', 'Pass a file path or use --from-stdin')
   }
   const namespace = validateNamespace(await resolveRef(rawNamespace))
   const strategy: KeyStrategy = options.keys === 'leaf' ? 'leaf' : 'upper-snake'
@@ -206,6 +240,7 @@ async function importAction(
     dryRun: options.dryRun,
     overwrite: options.overwrite,
     fromStdin: options.fromStdin,
+    raw: options.raw,
   })
   await storeRefs([namespace])
   if (options.dryRun) {
@@ -222,7 +257,9 @@ async function importAction(
 export function registerImportCommand(program: Command): void {
   program
     .command('import')
-    .description('Flatten a JSON file (or stdin) into onenv keys with reassembly metadata')
+    .description(
+      'Flatten a JSON file (or stdin) into onenv keys, or store any file verbatim with --raw',
+    )
     .argument('<namespace>', 'Namespace (supports @refs)')
     .argument('[file]', 'Path to a JSON file to import (omit when using --from-stdin)')
     .requiredOption('-g, --group <name>', 'Group name (required)')
@@ -230,7 +267,8 @@ export function registerImportCommand(program: Command): void {
     .option('-p, --prefix <prefix>', 'Prefix prepended to every derived key')
     .option('--dry-run', 'Print the import plan without writing')
     .option('--overwrite', 'Overwrite existing keys regardless of group; atomic on failure')
-    .option('--from-stdin', 'Read JSON from stdin instead of a file')
+    .option('--from-stdin', 'Read JSON (or raw content) from stdin instead of a file')
+    .option('--raw', 'Store the file verbatim as ONE key (PEM, .p8, kubeconfig); no JSON parsing')
     .action(importAction)
     .addHelpText(
       'after',
@@ -243,6 +281,8 @@ Examples:
   $ onenv import oauth ./new.json --group oauth --overwrite
       Replace existing keys atomically
   $ onenv import oauth ./client_secret.json --group oauth --dry-run
-      Preview the import plan without writing`,
+      Preview the import plan without writing
+  $ onenv import apple ./AuthKey_ABC123.p8 --group authkey --raw
+      Store a non-JSON file verbatim; run --file authkey:VAR rebuilds it as AuthKey_ABC123.p8`,
     )
 }

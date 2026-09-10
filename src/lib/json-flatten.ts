@@ -43,6 +43,20 @@ function emitLeaf(out: FlatEntry[], path: string, type: JsonLeafType, value: str
   out.push({ path, type, value })
 }
 
+/**
+ * A group holding a whole file verbatim (`onenv import --raw`) is exactly one
+ * entry of type `raw` whose path is the original filename. Returns it, or
+ * undefined for ordinary JSON groups. Mixing raw and JSON leaves is an error.
+ */
+export function findRawEntry(entries: FlatEntry[]): FlatEntry | undefined {
+  const raw = entries.filter((e) => e.type === 'raw')
+  if (raw.length === 0) return undefined
+  if (raw.length !== entries.length || raw.length > 1) {
+    throw new Error('raw file group must hold exactly one entry')
+  }
+  return raw[0]
+}
+
 export function unflatten(entries: FlatEntry[]): unknown {
   if (entries.length === 0) throw new Error('cannot unflatten empty entry list')
   if (entries.length === 1 && entries[0].path === '') {

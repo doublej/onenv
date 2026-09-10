@@ -1,4 +1,11 @@
-export type JsonLeafType = 'string' | 'number' | 'boolean' | 'null' | 'empty-object' | 'empty-array'
+export type JsonLeafType =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'null'
+  | 'empty-object'
+  | 'empty-array'
+  | 'raw'
 
 export interface NamespaceVar {
   key: string

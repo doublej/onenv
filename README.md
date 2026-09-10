@@ -140,6 +140,18 @@ materialized file before the child runs and re-imports it on clean exit only
 if the hash changed. Writeback is skipped on `SIGINT` / `SIGTERM` and on any
 read error, so a crashed child can't poison the vault.
 
+### Non-JSON files (Apple `.p8` keys, PEM certs, kubeconfigs)
+
+Add `--raw` to store any file verbatim as a single key. The original filename
+is kept, so `build-file` and `run --file` reproduce it byte-for-byte:
+
+```bash
+onenv import apple ./AuthKey_U76TN79743.p8 --group authkey --raw
+onenv build-file apple --group authkey                  # prints the PEM verbatim
+onenv run --file authkey:APP_STORE_CONNECT_API_KEY_PATH -- fastlane pilot upload
+# tempfile is .../onenv-XXXX/AuthKey_U76TN79743.p8, mode 0600
+```
+
 ### Per-account OAuth (one `token` group per account)
 
 When several namespaces hold the *same* leaf keys — e.g. one `token` group per
@@ -198,7 +210,8 @@ eval "$(onenv export <ns> --reveal --format shell)"  # load a namespace into you
 onenv import <ns> <file.json> --group <name>  # flatten a JSON file into onenv keys
 onenv import <ns> --group <name> --from-stdin # same, but read JSON from stdin
 onenv import <ns> <file.json> --group <name> --overwrite  # atomic replace (snapshot + rollback)
-onenv build-file <ns> --group <name>      # reassemble the JSON from stored leaves
+onenv import <ns> <file.p8> --group <name> --raw   # store any file verbatim as one key
+onenv build-file <ns> --group <name>      # reassemble the JSON (or raw file) from stored leaves
 
 onenv prime                               # full agent primer (XML / Markdown / JSON)
 onenv tui                                 # interactive TUI

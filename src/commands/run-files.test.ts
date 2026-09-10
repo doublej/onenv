@@ -69,7 +69,7 @@ describe('runWritebacks', () => {
         initialHash: 'stale',
       },
     ])
-    expect(importJsonFile).toHaveBeenCalledWith('ns', file, { group: 'token' })
+    expect(importJsonFile).toHaveBeenCalledWith('ns', file, { group: 'token', raw: undefined })
   })
 
   it('swallows import errors with stderr log', async () => {

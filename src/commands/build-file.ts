@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 import { validationError } from '../lib/errors.js'
-import { unflatten } from '../lib/json-flatten.js'
+import { findRawEntry, unflatten } from '../lib/json-flatten.js'
 import { listGroupEntries } from '../lib/onenv-client.js'
 
 export interface BuildFileOptions {
@@ -20,13 +20,12 @@ export async function buildFile(
       'Run "onenv import" to populate, or check the group name with "onenv list <ns> --groups"',
     )
   }
-  const obj = unflatten(entries)
-  const indent = opts.indent ?? 2
-  const text = JSON.stringify(obj, null, indent)
+  const raw = findRawEntry(entries)
+  const text = raw ? raw.value : `${JSON.stringify(unflatten(entries), null, opts.indent ?? 2)}\n`
   if (opts.out) {
-    await writeFile(opts.out, `${text}\n`)
+    await writeFile(opts.out, text)
   } else {
-    process.stdout.write(`${text}\n`)
+    process.stdout.write(text)
   }
   return text
 }

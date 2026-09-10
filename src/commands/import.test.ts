@@ -171,6 +171,42 @@ describe('importJsonFile', () => {
     expect(unsetValue).toHaveBeenCalledWith('test', 'B')
   })
 
+  it('--raw stores the whole file as one key named after the file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'onenv-import-test-'))
+    const file = join(dir, 'AuthKey_U76TN79743.p8')
+    const pem = '-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n'
+    writeFileSync(file, pem)
+    const { importJsonFile } = await import('./import.js')
+    const { rows } = await importJsonFile('apple', file, { group: 'authkey', raw: true })
+    expect(rows).toEqual([
+      { key: 'AUTHKEY_U76TN79743_P8', path: 'AuthKey_U76TN79743.p8', type: 'raw' },
+    ])
+    expect(setValueWithMeta).toHaveBeenCalledWith('apple', 'AUTHKEY_U76TN79743_P8', pem, {
+      group: 'authkey',
+      path: 'AuthKey_U76TN79743.p8',
+      type: 'raw',
+    })
+  })
+
+  it('--raw --from-stdin names the key after the group', async () => {
+    const fake = new PassThrough()
+    const original = Object.getOwnPropertyDescriptor(process, 'stdin')
+    Object.defineProperty(process, 'stdin', { value: fake, configurable: true })
+    try {
+      fake.end('not json at all')
+      const { importJsonFile } = await import('./import.js')
+      const { rows } = await importJsonFile('ns', undefined, {
+        group: 'kube-config',
+        raw: true,
+        fromStdin: true,
+        prefix: 'K8S',
+      })
+      expect(rows).toEqual([{ key: 'K8S_KUBE_CONFIG', path: 'kube-config', type: 'raw' }])
+    } finally {
+      if (original) Object.defineProperty(process, 'stdin', original)
+    }
+  })
+
   it('--from-stdin reads JSON from stdin', async () => {
     const fake = new PassThrough()
     const original = Object.getOwnPropertyDescriptor(process, 'stdin')

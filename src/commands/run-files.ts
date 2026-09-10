@@ -13,6 +13,7 @@ export interface FileInjection {
   cleanup: () => void
   writeback: boolean
   initialHash: string
+  raw?: boolean
 }
 
 export interface FileInjectionResult {
@@ -46,10 +47,10 @@ async function prepareInjection(
   const namespace = parsed.namespace
     ? await assertExplicitNamespace(parsed.namespace, parsed.group, namespaces)
     : await resolveGroupNamespace(parsed.group, namespaces)
-  const { path, cleanup } = await materializeFile(namespace, parsed.group)
+  const { path, raw, cleanup } = await materializeFile(namespace, parsed.group)
   fileEnv[parsed.varName] = path
   const initialHash = writeback ? hashFile(path) : ''
-  return { namespace, group: parsed.group, path, cleanup, writeback, initialHash }
+  return { namespace, group: parsed.group, path, cleanup, writeback, initialHash, raw }
 }
 
 export interface ParsedFileSpec {
@@ -136,7 +137,7 @@ async function writebackOne(inj: FileInjection): Promise<void> {
   const current = hashFile(inj.path)
   if (!current || current === inj.initialHash) return
   try {
-    await importJsonFile(inj.namespace, inj.path, { group: inj.group })
+    await importJsonFile(inj.namespace, inj.path, { group: inj.group, raw: inj.raw })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     process.stderr.write(`[onenv] writeback failed for ${inj.namespace}:${inj.group}: ${msg}\n`)
