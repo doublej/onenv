@@ -57,12 +57,12 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - `src/commands/prime.ts` — agent primer dispatcher (XML on TTY, Markdown when piped, JSON with `--json`)
 - `src/commands/prime-data.ts` + `prime-data-cli.ts` — primer data shape; `prime-detect.ts` builds the gated cwd snapshot
 - `src/commands/prime-xml.ts` / `prime-md.ts` — XML and Markdown renderers; `prime-logo.ts` holds the ASCII key banner
-- `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback and `--from-stdin`
+- `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback, `--from-stdin`, and `--raw` (whole file as one key)
 - `src/commands/explode.ts` — copy a regular 1Password item (e.g. a Login, read with the current op auth from any vault) into managed namespace keys; supports `--vault`, `--prefix`, `--dry-run`, atomic `--overwrite`
 - `src/commands/_snapshot.ts` — snapshot/rollback helpers shared by `import` and `explode`
 - `src/commands/explode-tui.ts` — guided explode flow (fuzzy item search, plan preview, key picking); `_prompts.ts` holds the shared namespace picker + fuzzy filter
 - `src/commands/completion.ts` — `onenv completion [zsh|bash|fish]`; scripts are generated from the live Commander program by `completion-data.ts` + `completion-zsh.ts` / `completion-shells.ts`, and `complete.ts` serves the hidden `__complete` candidate feed
-- `src/commands/build-file.ts` — reassemble a grouped JSON file from stored leaves
+- `src/commands/build-file.ts` — reassemble a grouped JSON file (or print a `--raw` file verbatim) from stored leaves
 - `src/commands/run-files.ts` — `--file group:VAR` materialization + child-process cleanup helpers
 - `src/lib/external-item.ts` — fetch a regular (non-onenv) 1Password item by title/ID, unscoped from `ONENV_VAULT`; consumed by `explode`
 - `src/lib/fingerprint.ts` — `sha256:<hex>` helper used by `get --fingerprint` and `check`

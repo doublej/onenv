@@ -36,7 +36,7 @@
     {
       title: 'JSON file workflow',
       description:
-        'onenv import flattens GCP service accounts, OAuth tokens, and kubeconfigs into per-leaf 1Password items. onenv run --file group:VAR materializes the rebuilt JSON to a 0600 tempfile and exposes its path. --from-stdin imports without writing the source JSON to disk.',
+        'onenv import flattens GCP service accounts, OAuth tokens, and kubeconfigs into per-leaf 1Password items. onenv run --file group:VAR materializes the rebuilt JSON to a 0600 tempfile and exposes its path. --raw stores non-JSON files (Apple .p8 keys, PEM certs) verbatim under their original filename. --from-stdin imports without writing the source to disk.',
     },
     {
       title: 'Per-project namespaces',
@@ -109,7 +109,7 @@
     {
       title: 'Materialize a JSON file',
       description: 'For tools that expect a path instead of env vars (GCP, kubeconfigs, OAuth). The tempfile lives under XDG_RUNTIME_DIR with mode 0600 and is removed on child exit, SIGINT, or SIGTERM.',
-      code: 'onenv import google /tmp/sa.json --group sa\nonenv run --file sa:GOOGLE_APPLICATION_CREDENTIALS -- python app.py',
+      code: 'onenv import google /tmp/sa.json --group sa\nonenv run --file sa:GOOGLE_APPLICATION_CREDENTIALS -- python app.py\nonenv import apple ./AuthKey_ABC123.p8 --group authkey --raw\nonenv run --file authkey:APP_STORE_CONNECT_API_KEY_PATH -- fastlane pilot upload',
     },
   ];
 

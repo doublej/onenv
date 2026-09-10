@@ -205,7 +205,7 @@ registerLearnCommands(program)
 
 program
   .command('build-file')
-  .description('Reassemble a grouped JSON file from onenv keys')
+  .description('Reassemble a grouped JSON file (or a --raw file) from onenv keys')
   .argument('<namespace>', 'Namespace (supports @refs)')
   .requiredOption('-g, --group <name>', 'Group name to rebuild')
   .option('-o, --out <path>', 'Output path (default: stdout)')
@@ -230,6 +230,8 @@ program
 Examples:
   $ onenv build-file oauth --group client_secret
       Reassemble the JSON file and print it to stdout
+  $ onenv build-file apple --group authkey
+      Print a --raw imported file (e.g. a .p8 key) verbatim
   $ onenv build-file oauth --group client_secret --out ./client_secret.json
       Write the reassembled JSON to a file`,
   )
@@ -272,7 +274,7 @@ program
   .argument('[-- command...]', 'Command to run with exported vars as env')
   .option(
     '-f, --file <spec>',
-    'Materialize a grouped JSON and expose its path: [namespace/]group:ENV_VAR',
+    'Materialize a grouped JSON (or --raw file) and expose its path: [namespace/]group:ENV_VAR',
     collectOption,
     [] as string[],
   )

@@ -8,19 +8,19 @@ Add secret: `onenv set <namespace> <KEY>` (interactive). For scripted/piped sour
 Compare without exposing: `onenv get <ns> <KEY> --fingerprint` returns `sha256:<hex>`. Use `onenv check` to detect drift between `process.env` and onenv-stored secrets in a project.
 Run cmd needing secrets: `onenv run -- <cmd>`. Not manual `export`, not shell injection.
 Rotate: `onenv set` overwrites. Retire: `onenv disable <ns> <KEY>` (preserves history) over `unset` (destructive; `unset` refuses in non-TTY contexts unless `--yes`).
-Bulk import: `onenv import <ns> <file> --group <name>` (required). Add `--overwrite` for atomic replace, or `--from-stdin` to skip the file path.
+Bulk import: `onenv import <ns> <file> --group <name>` (required). Add `--overwrite` for atomic replace, or `--from-stdin` to skip the file path. Non-JSON files (.p8, PEM, kubeconfig): add `--raw` to store the whole file as one key.
 </rules>
 
 <data_model>
 Vault `onenv` (override: `ONENV_VAULT`). Items titled `namespace/KEY`. Tag `onenv:<namespace>` (the prefix marks ownership and is the CLI's filter). Field `credential` = value.
 Per-project: `.onenv.json` declares namespaces used. Positional namespace refs: `@1`, `@2`, ..., `@last` index into the most recent namespace listing.
 State: `~/.config/onenv-manager/state.json` tracks disabled keys (shape `{version:1, disabled:{ns:[keys]}}`). Token cache: `~/.config/onenv-manager/op-token` (mode 0600).
-JSON files (GCP service accounts, OAuth tokens, kubeconfigs) can be flattened via `onenv import` and rebuilt via `onenv build-file` or `onenv run --file group:VAR`.
+JSON files (GCP service accounts, OAuth tokens, kubeconfigs) can be flattened via `onenv import` and rebuilt via `onenv build-file` or `onenv run --file group:VAR`. Files imported with `--raw` come back verbatim under their original filename.
 Cross-namespace key collisions in `export` / `run` are a hard error — resolve by disabling one side or splitting namespaces.
 </data_model>
 
 <commands>
-prime · list [--groups] [--meta] · get [--fingerprint] [--meta] · set [--value-stdin] · edit [--value-stdin] · unset [--yes] · check · disable · enable · run [--file group:VAR] [--file-rw group:VAR] -- · export · init · import [--overwrite] [--from-stdin] --group · build-file · tui
+prime · list [--groups] [--meta] · get [--fingerprint] [--meta] · set [--value-stdin] · edit [--value-stdin] · unset [--yes] · check · disable · enable · run [--file group:VAR] [--file-rw group:VAR] -- · export · init · import [--raw] [--overwrite] [--from-stdin] --group · build-file · tui
 Single-ns fetch: `onenv list <ns>`. All ns: `onenv list`. Group view: `onenv list <ns> --groups`. Drift check: `onenv check`.
 </commands>
 

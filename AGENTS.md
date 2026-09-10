@@ -45,7 +45,7 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - Item title: `namespace/KEY` (e.g. `aws/AWS_SECRET_KEY`)
 - Item tag: `onenv:<namespace>` (the `onenv:` prefix marks the item as managed and is what the CLI filters on)
 - Secret stored in the `credential` field
-- Imported JSON files (via `onenv import`) carry extra STRING fields `group`, `path`, `type` per leaf for round-trip via `onenv build-file`
+- Imported JSON files (via `onenv import`) carry extra STRING fields `group`, `path`, `type` per leaf for round-trip via `onenv build-file`. `onenv import --raw` stores a non-JSON file as ONE key with `type=raw` and `path=<original basename>`; `build-file` and `run --file` reproduce it verbatim under that filename
 
 ### Source layout
 
@@ -56,8 +56,8 @@ src/lib/state-store.ts     → disabled-key tracking (~/.config/onenv-manager/st
 - `src/commands/prime.ts` — agent primer dispatcher (XML on TTY, Markdown when piped, JSON with `--json`)
 - `src/commands/prime-data.ts` + `prime-data-cli.ts` — primer data shape; `prime-detect.ts` builds the gated cwd snapshot
 - `src/commands/prime-xml.ts` / `prime-md.ts` — XML and Markdown renderers; `prime-logo.ts` holds the ASCII key banner
-- `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback and `--from-stdin`
-- `src/commands/build-file.ts` — reassemble a grouped JSON file from stored leaves
+- `src/commands/import.ts` — flatten a JSON file (or stdin) into onenv keys with `group`/`path`/`type` metadata; supports `--overwrite` with atomic snapshot/rollback, `--from-stdin`, and `--raw` (whole file as one key)
+- `src/commands/build-file.ts` — reassemble a grouped JSON file (or print a `--raw` file verbatim) from stored leaves
 - `src/commands/run-files.ts` — `--file group:VAR` materialization + child-process cleanup helpers
 - `src/lib/fingerprint.ts` — `sha256:<hex>` helper used by `get --fingerprint` and `check`
 - `src/lib/json-flatten.ts` — pure flatten/unflatten with empty-container sentinels
