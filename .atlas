@@ -1,5 +1,6 @@
 {
   "type": "workspace",
   "description": "onenv — 1Password-backed environment variable manager. Single TypeScript CLI replacing .env files.",
-  "archived": false
+  "archived": false,
+  "id": "prqmy7mh9r"
 }
